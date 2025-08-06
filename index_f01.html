@@ -1,0 +1,344 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>AI Stress Reliever</title>
+<style>
+ body {
+   font-family: Arial, sans-serif;
+   margin: 0;
+   padding: 0;
+   background: #f5f5f5;
+   text-align: center;
+ }
+ header {
+   background: #4a90e2;
+   color: white;
+   padding: 10px;
+ }
+ section {
+   padding: 20px;
+ }
+ .palette button {
+   width: 30px;
+   height: 30px;
+   border: none;
+   margin: 5px;
+   border-radius: 4px;
+ }
+ #paint-svg {
+   width: 90%;
+   max-width: 300px;
+   border: 1px solid #ccc;
+ }
+ #breathing-heart {
+   width: 100px;
+   height: 90px;
+   position: relative;
+   margin: 20px auto;
+   transform: rotate(-45deg) scale(1);
+   background: #ffdfe2;
+ }
+ #breathing-heart:before,
+ #breathing-heart:after {
+   content: "";
+   position: absolute;
+   width: 100px;
+   height: 90px;
+   background: inherit;
+   border-radius: 50%;
+ }
+ #breathing-heart:before {
+   top: -50px;
+   left: 0;
+ }
+ #breathing-heart:after {
+   left: 50px;
+   top: 0;
+ }
+ #chat-log {
+   max-height: 200px;
+   overflow-y: auto;
+   text-align: left;
+   margin-bottom: 10px;
+   border: 1px solid #ccc;
+   padding: 5px;
+   background: #fff;
+ }
+ #language-toggle {
+   position: fixed;
+   top: 10px;
+   right: 10px;
+ }
+ .quote-box {
+   background: #fff;
+   padding: 10px;
+   border: 1px solid #ccc;
+   border-radius: 5px;
+ }
+</style>
+</head>
+<body>
+<button id="language-toggle">Español</button>
+<header>
+ <h1 data-i18n="appTitle">AI Stress Reliever</h1>
+</header>
+
+<section id="paint-section">
+ <h2 data-i18n="paintTitle">Paint By Numbers</h2>
+ <div class="palette" id="color-palette"></div>
+ <svg id="paint-svg" viewBox="0 0 200 150">
+   <rect data-id="1" x="10" y="10" width="80" height="80" fill="white" stroke="black" />
+   <text x="50" y="60" font-size="24" text-anchor="middle">1</text>
+   <circle data-id="2" cx="150" cy="50" r="40" fill="white" stroke="black" />
+   <text x="150" y="60" font-size="24" text-anchor="middle">2</text>
+   <polygon data-id="3" points="60,140 100,100 140,140" fill="white" stroke="black" />
+   <text x="100" y="130" font-size="24" text-anchor="middle">3</text>
+ </svg>
+ <br />
+ <button id="reset-paint" data-i18n="reset">Reset</button>
+</section>
+
+<section id="breathing-section">
+ <h2 data-i18n="breathingTitle">Breathing Exercise</h2>
+ <label data-i18n="durationLabel">Duration:</label>
+ <select id="duration-select">
+   <option value="30">30s</option>
+   <option value="45">45s</option>
+   <option value="60">60s</option>
+ </select>
+ <button id="start-breathing" data-i18n="start">Start</button>
+ <div id="breathing-heart"></div>
+ <div><span data-i18n="stepLabel">Step:</span> <span id="step-display">-</span></div>
+ <div><span data-i18n="timeLeftLabel">Time left:</span> <span id="step-time">0</span>s</div>
+ <div><span data-i18n="overallTimeLabel">Overall left:</span> <span id="overall-time">0</span>s</div>
+</section>
+
+<section id="quotes-section">
+ <h2 data-i18n="quotesTitle">Calming Quotes</h2>
+ <div class="quote-box" id="quote-display"></div>
+ <button id="new-quote" data-i18n="newQuote">New Quote</button>
+</section>
+
+<section id="chat-section">
+ <h2 data-i18n="chatbotTitle">Doctor's AI Assistant</h2>
+ <div id="chat-log"></div>
+ <input type="text" id="chat-input" placeholder="Type your question..." />
+ <button id="send-chat" data-i18n="send">Send</button>
+</section>
+
+<script>
+let currentLang = 'en';
+const translations = {
+  en: {
+    appTitle: 'AI Stress Reliever',
+    paintTitle: 'Paint By Numbers',
+    reset: 'Reset',
+    breathingTitle: 'Breathing Exercise',
+    durationLabel: 'Duration:',
+    start: 'Start',
+    stepLabel: 'Step:',
+    timeLeftLabel: 'Time left:',
+    overallTimeLabel: 'Overall left:',
+    inhale: 'Inhale',
+    exhale: 'Exhale',
+    hold: 'Hold',
+    quotesTitle: 'Calming Quotes',
+    newQuote: 'New Quote',
+    chatbotTitle: "Doctor's AI Assistant",
+    send: 'Send',
+    languageToggle: 'Español',
+    placeholder: 'Type your question...'
+  },
+  es: {
+    appTitle: 'Aliviador de Estrés AI',
+    paintTitle: 'Pinta por Números',
+    reset: 'Reiniciar',
+    breathingTitle: 'Ejercicio de Respiración',
+    durationLabel: 'Duración:',
+    start: 'Comenzar',
+    stepLabel: 'Paso:',
+    timeLeftLabel: 'Tiempo restante:',
+    overallTimeLabel: 'Tiempo total:',
+    inhale: 'Inhala',
+    exhale: 'Exhala',
+    hold: 'Mantén',
+    quotesTitle: 'Frases Tranquilizadoras',
+    newQuote: 'Nueva Frase',
+    chatbotTitle: 'Asistente IA del Doctor',
+    send: 'Enviar',
+    languageToggle: 'English',
+    placeholder: 'Escribe tu pregunta...'
+  }
+};
+
+const quotes = {
+  en: [
+    'Breathe. You are stronger than you think.',
+    'Every day is a second chance.',
+    'You are not alone in this journey.'
+  ],
+  es: [
+    'Respira. Eres más fuerte de lo que piensas.',
+    'Cada día es una segunda oportunidad.',
+    'No estás solo en este camino.'
+  ]
+};
+
+function updateLanguage() {
+  const dict = translations[currentLang];
+  document.querySelectorAll('[data-i18n]').forEach(el => {
+    const key = el.getAttribute('data-i18n');
+    if(dict[key]) el.textContent = dict[key];
+  });
+  document.getElementById('language-toggle').textContent = dict.languageToggle;
+  document.getElementById('chat-input').placeholder = dict.placeholder;
+}
+
+document.getElementById('language-toggle').addEventListener('click', () => {
+  currentLang = currentLang === 'en' ? 'es' : 'en';
+  updateLanguage();
+});
+
+updateLanguage();
+
+// Paint by numbers
+const colors = ['#FF0000','#00FF00','#0000FF','#FFFF00','#FFA500','#800080','#FFC0CB','#00FFFF'];
+let currentColor = colors[0];
+const palette = document.getElementById('color-palette');
+colors.forEach((c,i)=>{
+  const btn = document.createElement('button');
+  btn.style.background = c;
+  btn.addEventListener('click', ()=>{currentColor=c;});
+  palette.appendChild(btn);
+});
+document.querySelectorAll('#paint-svg [data-id]').forEach(shape=>{
+  shape.addEventListener('click', ()=>{
+    shape.setAttribute('fill', currentColor);
+  });
+});
+
+document.getElementById('reset-paint').addEventListener('click', ()=>{
+  document.querySelectorAll('#paint-svg [data-id]').forEach(shape=>{
+    shape.setAttribute('fill','white');
+  });
+});
+
+// Breathing exercise
+let breathingInterval;
+function startBreathing() {
+  clearInterval(breathingInterval);
+  const total = parseInt(document.getElementById('duration-select').value,10);
+  let overall = total;
+  let phase = 0; // 0=inhale,1=hold,2=exhale,3=hold
+  let phaseTime = 5;
+  const heart = document.getElementById('breathing-heart');
+  const stepDisplay = document.getElementById('step-display');
+  const stepTime = document.getElementById('step-time');
+  const overallDisplay = document.getElementById('overall-time');
+  overallDisplay.textContent = overall;
+  const steps = ['inhale','hold','exhale','hold'];
+  function updatePhase() {
+    const dict = translations[currentLang];
+    stepDisplay.textContent = dict[steps[phase]];
+    stepTime.textContent = phaseTime;
+    heart.style.transition = 'all 1s linear';
+    if(steps[phase]==='inhale') {
+      heart.style.background = '#c8f7c5';
+      heart.style.transform = 'rotate(-45deg) scale(1.2)';
+    } else if(steps[phase]==='exhale') {
+      heart.style.background = '#f7c5c5';
+      heart.style.transform = 'rotate(-45deg) scale(1)';
+    } else {
+      heart.style.background = '#ffdfe2';
+    }
+  }
+  updatePhase();
+  breathingInterval = setInterval(()=>{
+    phaseTime--;
+    overall--;
+    stepTime.textContent = phaseTime;
+    overallDisplay.textContent = overall;
+    if(phaseTime<=0){
+      phase = (phase+1)%4;
+      phaseTime=5;
+      updatePhase();
+    }
+    if(overall<=0){
+      clearInterval(breathingInterval);
+      stepDisplay.textContent='-';
+      heart.style.background='#ffdfe2';
+      heart.style.transform='rotate(-45deg) scale(1)';
+    }
+  },1000);
+}
+
+document.getElementById('start-breathing').addEventListener('click', startBreathing);
+
+// Quotes
+function showQuote(){
+  const q = quotes[currentLang];
+  const text = q[Math.floor(Math.random()*q.length)];
+  document.getElementById('quote-display').textContent = text;
+}
+
+document.getElementById('new-quote').addEventListener('click', showQuote);
+showQuote();
+
+// Chatbot
+async function sendMessage(){
+  const input = document.getElementById('chat-input');
+  const msg = input.value.trim();
+  if(!msg) return;
+  appendChat('user', msg);
+  input.value='';
+  appendChat('assistant', translations[currentLang].hold + '...');
+  try{
+    const response = await fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer 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'
+      },
+      body: JSON.stringify({
+        model: 'gpt-4o-mini',
+        messages: [
+          {role:'system', content:'You are a friendly medical assistant helping oncology patients.'},
+          {role:'user', content: msg}
+        ]
+      })
+    });
+    const data = await response.json();
+    document.querySelector('#chat-log .typing').remove();
+    appendChat('assistant', data.choices[0].message.content);
+  } catch(e){
+    document.querySelector('#chat-log .typing').remove();
+    appendChat('assistant', 'Error');
+  }
+}
+
+function appendChat(role, text){
+  const log = document.getElementById('chat-log');
+  if(role==='assistant' && text===translations[currentLang].hold+'...'){
+    const div=document.createElement('div');
+    div.className='typing';
+    div.textContent=text;
+    log.appendChild(div);
+    log.scrollTop = log.scrollHeight;
+    return;
+  }
+  const div=document.createElement('div');
+  div.textContent=(role==='user'?'> ':'')+text;
+  log.appendChild(div);
+  log.scrollTop = log.scrollHeight;
+}
+
+
+document.getElementById('send-chat').addEventListener('click', sendMessage);
+document.getElementById('chat-input').addEventListener('keydown', (e)=>{
+  if(e.key==='Enter') sendMessage();
+});
+</script>
+</body>
+</html>
