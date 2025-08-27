@@ -195,7 +195,12 @@
       </div>
     </div>
 
-    <div class="actions"><button id="mark-complete" class="secondary" disabled data-i18n="btnCompleteActivity" type="button">Complete Activity</button></div>
+    <div class="actions">
+      <button id="mark-complete" class="secondary" data-i18n="btnCompleteActivity" type="button">Complete Activity</button>
+    </div>
+    <p class="muted" style="margin-top:6px" data-i18n="continueAnytimeHint">
+      Continue at any time.
+    </p>
   </section>
 
   <!-- Calming Quotes -->
@@ -300,6 +305,8 @@
       selectBody:'Please choose and complete one of the two activities below: Paint-By-Numbers or Breathing Exercise.',
       paintTitle:'Paint-By-Numbers', paintDesc:'Follow the numbers to discover and enjoy the moment by revealing the final picture using colors.',
       paintHelp:'Tap any numbered shape to fill it with its color. Use the legend and the reference image below.',
+      continueAnytimeHint: 'You can continue at any time.',
+      incompleteConfirm: 'You have not completed the activity. Continue anyway?',
       legendTitle:'Color Legend', legendHint:'Tap a numbered area to fill it with its preset color.', reset:'Reset',
       refCaption:'Reference palette used to build the legend.',
       breathingTitle:'Breathing Exercise', durationLabel:'Duration:', start:'Start', stepLabel:'Step:', timeLeftLabel:'Time left:', overallTimeLabel:'Overall left:',
@@ -333,6 +340,8 @@
       selectBody:'Por favor, escoge y completa una de las dos actividades: Pinta por Números o Ejercicio de Respiración.',
       paintTitle:'Pinta por Números', paintDesc:'Sigue los números para descubrir y disfrutar el momento al revelar el cuadro final con colores.',
       paintHelp:'Toca cualquier forma numerada para rellenarla. Usa la leyenda y la imagen de referencia.',
+      continueAnytimeHint: 'Puede continuar en cualquier momento.',
+      incompleteConfirm: 'No has completado la actividad. ¿Deseas continuar?',
       legendTitle:'Leyenda de Colores', legendHint:'Toca un área con número para rellenarla con su color predefinido.', reset:'Reiniciar',
       refCaption:'Paleta de referencia usada para construir la leyenda.',
       breathingTitle:'Ejercicio de Respiración', durationLabel:'Duración:', start:'Comenzar', stepLabel:'Paso:', timeLeftLabel:'Tiempo restante:', overallTimeLabel:'Tiempo total:',
@@ -401,9 +410,12 @@
     const choice=document.querySelector('input[name="activity"]:checked')?.value||'paint';
     document.getElementById('paint-card').style.display=(choice==='paint')?'block':'none';
     document.getElementById('breathing-card').style.display=(choice==='breathing')?'block':'none';
-    document.getElementById('mark-complete').disabled=true;
+    activityDone = false; // user is starting fresh
     go('activity');
   });
+
+  // Tracks whether the current activity was completed (paint fully colored OR breathing finished)
+  let activityDone = false;
 
   // ---------------- Palette (1–11) & Legend ----------------
   const PRESET_COLORS=[
@@ -419,6 +431,7 @@
     {id:10,hex:'#60A5FA',en:'Sky Blue',es:'Azul Cielo'},
     {id:11,hex:'#93C5FD',en:'Light Sky',es:'Celeste'}
   ];
+
   function renderLegend(){
     const wrap=document.getElementById('legend'); if(!wrap) return; wrap.innerHTML='';
     PRESET_COLORS.forEach(c=>{
@@ -428,6 +441,7 @@
       item.appendChild(sw); item.appendChild(label); wrap.appendChild(item);
     });
   }
+
   function colorForId(id){return (PRESET_COLORS.find(c=>c.id==id)||PRESET_COLORS[0]).hex}
 
   // ---------------- Paint-by-Numbers (EXTERNAL SVG with inline fallback) ----------------
@@ -462,7 +476,7 @@
     if(resetBtn){
       resetBtn.onclick = ()=>{
         [...paintables].forEach(el=> el.setAttribute('fill','white'));
-        document.getElementById('mark-complete').disabled = true;
+        activityDone = false;
       };
     }
 
@@ -471,16 +485,18 @@
   }
 
   function checkPaintComplete_external(){
-    if(!svgRoot){ document.getElementById('mark-complete').disabled = true; return; }
+    if(!svgRoot){ activityDone = false; return; }
     const shapes = svgRoot.querySelectorAll('[data-id]');
     let done = true;
     shapes.forEach(s=>{
       const f = (s.getAttribute('fill')||'').toLowerCase();
       if(!f || f==='white' || f==='#fff' || f==='rgb(255, 255, 255)') done = false;
     });
-    const btn = document.getElementById('mark-complete');
-    btn.disabled = !done;
-    if(done) toast( (currentLang==='es') ? '¡Muy bien! Pintura completada.' : 'Great job! Painting completed.' );
+    const wasDone = activityDone;
+    activityDone = done;
+    if(done && !wasDone){
+      toast( (currentLang==='es') ? '¡Muy bien! Pintura completada.' : 'Great job! Painting completed.' );
+    }
   }
 
   async function bindPeacock(){
@@ -539,8 +555,10 @@
       alert('Could not load peacock.svg. If you are opening this file with file:// in Chrome, start a local server:\n\npython3 -m http.server 5500\n\nthen open http://localhost:5500');
     }
   }
+
   // ---------------- Breathing cycles ----------------
   let breathingInterval;
+
   function startBreathing(){
     clearInterval(breathingInterval);
     const total=parseInt(document.getElementById('duration-select').value,10);
@@ -550,22 +568,25 @@
     const stepTime=document.getElementById('step-time');
     const overallDisplay=document.getElementById('overall-time');
     const steps=['inhale','hold','exhale','hold'];
+
     function updatePhase(){
       stepDisplay.textContent=t(steps[phase]); stepTime.textContent=phaseTime;
       if(steps[phase]==='inhale'){heart.setAttribute('fill','#c8f7c5');heart.style.transform='scale(1.18)';}
       else if(steps[phase]==='exhale'){heart.setAttribute('fill','#f7c5c5');heart.style.transform='scale(1.0)';}
       else {heart.setAttribute('fill','#ffdfe2');}
     }
+
     overallDisplay.textContent=overall; updatePhase();
     breathingInterval=setInterval(()=>{
       phaseTime--; overall--; stepTime.textContent=phaseTime; overallDisplay.textContent=overall;
       if(phaseTime<=0){phase=(phase+1)%4; phaseTime=5; updatePhase();}
       if(overall<=0){clearInterval(breathingInterval); stepDisplay.textContent='-'; heart.setAttribute('fill','#ffdfe2'); heart.style.transform='scale(1)';
-        document.getElementById('mark-complete').disabled=false;
+        activityDone = true;
         toast(currentLang==='en'?'Nice work! Breathing cycle completed.':'¡Excelente! Respiración completada.');
       }
     },1000);
   }
+
   document.getElementById('start-breathing').addEventListener('click',startBreathing);
 
   // ---------------- Quotes (full list + no-repeat shuffle bag) ----------------
@@ -695,7 +716,14 @@
     if(elA) elA.textContent=a && a.trim()? '— '+a : '—';
   }
   document.getElementById('new-quote').addEventListener('click', showQuote);
-  document.getElementById('mark-complete').addEventListener('click', ()=>{ go('quotes'); showQuote(); });
+  document.getElementById('mark-complete').addEventListener('click', ()=>{
+    if(!activityDone){
+      const ok = confirm( t('incompleteConfirm') );
+      if(!ok) return;
+    }
+    go('quotes');
+    showQuote();
+  });
   document.getElementById('to-intake').addEventListener('click', ()=> go('intake'));
 
   // ---------------- Intake validation ----------------
