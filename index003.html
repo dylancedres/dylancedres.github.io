@@ -50,6 +50,11 @@
   .legend{display:grid;grid-template-columns:repeat(auto-fit,minmax(148px,1fr));gap:8px}
   .legend .item{display:flex;align-items:center;gap:10px;background:#fafafa;border:1px solid #eee;border-radius:12px;padding:9px}
   .swatch{width:24px;height:24px;border-radius:8px;border:1px solid #d1d5db}
+  
+  /* Clickable legend selection */
+  .legend .item { cursor: pointer; user-select: none; transition: transform .08s ease, box-shadow .08s ease; }
+  .legend .item:focus-visible { outline: none; box-shadow: 0 0 0 3px rgba(74,144,226,.35); }
+  .legend .item.selected { outline: 2px solid #4a90e2; box-shadow: 0 0 0 4px rgba(74,144,226,.15); transform: translateY(-1px); }
 
   /* Breathing */
   #breathing-heart{width:220px;margin:12px auto}
@@ -304,7 +309,7 @@
       selectTitle:'Choose one activity',
       selectBody:'Please choose and complete one of the two activities below: Paint-By-Numbers or Breathing Exercise.',
       paintTitle:'Paint-By-Numbers', paintDesc:'Follow the numbers to discover and enjoy the moment by revealing the final picture using colors.',
-      paintHelp:'Tap any numbered shape to fill it with its color. Use the legend as your guide.',
+      paintHelp:'Pick a color in the legend, then tap matching numbers on the drawing to fill them.',
       continueAnytimeHint: 'You can continue at any time.',
       incompleteConfirm: 'You have not completed the activity. Continue anyway?',
       legendTitle:'Color Legend', legendHint:'Tap a numbered area to fill it with its preset color.', reset:'Reset',
@@ -339,7 +344,7 @@
       selectTitle:'Escoge una actividad',
       selectBody:'Por favor, escoge y completa una de las dos actividades: Pinta por Números o Ejercicio de Respiración.',
       paintTitle:'Pinta por Números', paintDesc:'Sigue los números para descubrir y disfrutar el momento al revelar el cuadro final con colores.',
-      paintHelp:'Toca cualquier forma numerada para rellenarla. Usa la leyenda como guía.',
+      paintHelp:'Elige un color en la leyenda y luego toca los números correspondientes en el dibujo para rellenarlos.',
       continueAnytimeHint: 'Puede continuar en cualquier momento.',
       incompleteConfirm: 'No has completado la actividad. ¿Deseas continuar?',
       legendTitle:'Leyenda de Colores', legendHint:'Toca un área con número para rellenarla con su color predefinido.', reset:'Reiniciar',
@@ -367,7 +372,9 @@
       completedPaint:'¡Muy bien! Pintura completada.', completedBreathing:'¡Excelente! Respiración completada.'
     }
   };
+
   function t(k){return translations[currentLang][k]||k}
+
   function updateLanguage(){
     document.querySelectorAll('[data-i18n]').forEach(el=>{
       const key=el.getAttribute('data-i18n');
@@ -380,7 +387,7 @@
   }
   document.getElementById('language-toggle').addEventListener('click',()=>{currentLang=currentLang==='en'?'es':'en';updateLanguage();});
 
-  // ---------------- Navigation ----------------
+  // Navigation 
   const ORDER=['welcome','select','activity','quotes','intake','assistant'];
   const reached=new Set(['welcome']);
   function go(page){
@@ -416,6 +423,9 @@
 
   // Tracks whether the current activity was completed (paint fully colored OR breathing finished)
   let activityDone = false;
+  
+  // Current legend pick (the color number user selected), null = none picked
+  let currentPick = null;
 
   // Legend colors (RRGGBB[AA]) → CSS color 
   const RAW_LEGEND = {
@@ -458,13 +468,51 @@
   });
 
   function renderLegend(){
-    const wrap=document.getElementById('legend'); if(!wrap) return; wrap.innerHTML='';
-    PRESET_COLORS.forEach(c=>{
-      const item=document.createElement('div'); item.className='item';
-      const sw=document.createElement('span'); sw.className='swatch'; sw.style.background=c.hex;
-      const label=document.createElement('span'); label.textContent=String(c.id);
-      item.appendChild(sw); item.appendChild(label); wrap.appendChild(item);
+    const wrap=document.getElementById('legend'); if(!wrap) return; 
+    const prevPick = currentPick; // remember selection across re-renders
+    wrap.innerHTML='';
+
+    PRESET_COLORS
+      .slice()                 // copy
+      .sort((a,b)=>a.id-b.id)  // 1..11
+      .forEach(c=>{
+        const item=document.createElement('button');
+        item.type='button';
+        item.className='item';
+        item.setAttribute('data-id', String(c.id));
+        item.setAttribute('aria-pressed', (prevPick===c.id) ? 'true' : 'false');
+        if(prevPick===c.id) item.classList.add('selected');
+
+        const sw=document.createElement('span'); 
+        sw.className='swatch'; 
+        sw.style.background=c.hex;
+
+        const label=document.createElement('span'); 
+        label.textContent=String(c.id);
+
+        item.appendChild(sw); 
+        item.appendChild(label); 
+        wrap.appendChild(item);
+
+        item.addEventListener('click', ()=>{
+          setLegendPick(c.id);
+        });
+        item.addEventListener('keydown', (e)=>{
+          if(e.key==='Enter' || e.key===' ') { e.preventDefault(); setLegendPick(c.id); }
+        });
+      });
+  }
+
+  function setLegendPick(id){
+    currentPick = id;
+    // visual state
+    document.querySelectorAll('#legend .item').forEach(el=>{
+      const isSel = Number(el.getAttribute('data-id')) === id;
+      el.classList.toggle('selected', isSel);
+      el.setAttribute('aria-pressed', isSel ? 'true' : 'false');
     });
+    // subtle cue
+    toast( currentLang==='es' ? `Color seleccionado: ${id}` : `Selected color: ${id}` );
   }
 
   function colorForId(id){return (PRESET_COLORS.find(c=>c.id==id)||PRESET_COLORS[0]).hex}
@@ -511,16 +559,32 @@
       if(!el.getAttribute('stroke-width')) el.setAttribute('stroke-width','1');
       el.style.cursor='pointer';
       el.addEventListener('click',()=>{
-        const id = Number(el.getAttribute('data-id')) || 1;
-        el.setAttribute('fill', colorForId(id));
+        const targetId = Number(el.getAttribute('data-id')) || 1;
+        
+        // Require a pick from the legend first
+        if(currentPick == null){
+          toast(currentLang==='es' ? 'Elige un color en la leyenda.' : 'Pick a color from the legend first.');
+          return;
+        }
 
-        // OPTIONAL behaviors:
-        svgRoot.querySelectorAll(`text[data-id="${id}"]`).forEach(t => t.remove()); // hide number after painting
-        // svgRoot.querySelectorAll(`text[data-id="${id}"]`).forEach(t => t.setAttribute('opacity','0.2')); // or fade it
+        // Enforce correct color (classic paint-by-numbers)
+        if(currentPick !== targetId){
+          // tiny feedback: flash the outline briefly
+          const oldStroke = el.getAttribute('stroke') || '#222';
+          el.setAttribute('stroke', '#e11d48'); // red
+          setTimeout(()=> el.setAttribute('stroke', oldStroke), 220);
+          toast(currentLang==='es' ? `Ese área es #${targetId}. Selecciona ${targetId}.` : `That area is #${targetId}. Please select ${targetId}.`);
+          return;
+        }
+        
+        // Fill with the picked color
+        el.setAttribute('fill', colorForId(currentPick));
+
+        // Hide the printed number(s) for this id (keeps board clean)
+        svgRoot.querySelectorAll(`text[data-id="${targetId}"]`).forEach(t => t.remove());
 
         checkPaintComplete_external();
       });
-    });
 
     // Reset (numbers stay colored; regions go back to white)
     const resetBtn = document.getElementById('reset-paint');
