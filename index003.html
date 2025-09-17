@@ -426,17 +426,26 @@
   const reached=new Set(['welcome']);
   function go(page){
     ORDER.forEach(p=>{
-      document.getElementById('page-'+p).classList.toggle('active',p===page);
-      document.getElementById('s-'+p).classList.toggle('active',p===page);
+      const pageEl = document.getElementById('page-'+p);
+      const stepEl = document.getElementById('s-'+p);
+      if(pageEl) pageEl.classList.toggle('active', p===page);
+      if(stepEl) stepEl.classList.toggle('active', p===page);
     });
-    reached.add(page); window.scrollTo({top:0,behavior:'smooth'});
+    reached.add(page);
+    // scroll after the DOM flips, so the jump always happens
+    requestAnimationFrame(()=> window.scrollTo({top:0, behavior:'smooth'}));
   }
   document.querySelectorAll('.stepper .step').forEach(step=>{
   step.style.cursor = 'default';
   step.addEventListener('click', e => e.preventDefault()); // display-only
   });
   document.querySelectorAll('[data-back]').forEach(b=>b.addEventListener('click',()=>go(b.getAttribute('data-back'))));
-  document.getElementById('to-select').addEventListener('click',()=>go('select'));
+  const btnToSelect = document.getElementById('to-select');
+  if(btnToSelect){
+    btnToSelect.addEventListener('click', (e)=>{ e.preventDefault(); go('select'); });
+  } else {
+    console.warn('#to-select not found at bind time');
+  }
 
   // Tracks whether the current activity was completed (paint fully colored OR breathing finished)
   let activityDone = false;
