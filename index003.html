@@ -1,0 +1,854 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>AI Stress Reliever</title>
+<style>
+  :root{
+    --primary:#4a90e2; --bg:#f6f7fb; --card:#ffffff; --text:#1f2937; --muted:#6b7280;
+    --pad:18px; --radius:16px; --shadow:0 10px 30px rgba(0,0,0,.08);
+    --ring:0 0 0 3px rgba(74,144,226,.35);
+  }
+  *{box-sizing:border-box}
+  html,body{height:100%}
+  body{margin:0;font-family:Inter, system-ui, Segoe UI, Roboto, Helvetica, Arial, sans-serif;background:var(--bg);color:var(--text)}
+
+  header{position:sticky;top:0;z-index:30;background:linear-gradient(90deg,#4a90e2,#6aa9ff);color:#fff;padding:12px 16px;box-shadow:0 2px 10px rgba(0,0,0,.12)}
+  header h1{margin:0;font-size:20px}
+  #language-toggle{position:fixed;right:12px;top:12px;background:#fff;color:#111;border:1px solid #e5e7eb;border-radius:999px;padding:8px 12px;cursor:pointer;font-weight:700;z-index:40}
+
+  main{max-width:1000px;margin:18px auto;padding:0 12px}
+  .stepper{display:flex;gap:8px;flex-wrap:wrap;margin:8px 0 18px}
+  .step{flex:1 1 auto;min-width:150px;background:#e8f0ff;border-radius:999px;padding:8px 12px;color:#0f172a;opacity:.65;cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .step.active{background:#ffffff;box-shadow:var(--shadow);opacity:1}
+  .step:focus-visible{outline:none;box-shadow:var(--ring)}
+
+  .card{background:var(--card);border-radius:var(--radius);box-shadow:var(--shadow);padding:var(--pad)}
+  .row{display:flex;gap:16px;flex-wrap:wrap}
+  .col{flex:1 1 280px}
+  .actions{display:flex;gap:12px;flex-wrap:wrap;margin-top:14px}
+  button{appearance:none;border:0;background:var(--primary);color:#fff;padding:11px 16px;border-radius:12px;font-weight:800;cursor:pointer}
+  button.secondary{background:#e5e7eb;color:#111}
+  button.ghost{background:transparent;border:1px solid #e5e7eb;color:#111}
+  button:disabled{opacity:.55;cursor:not-allowed}
+  .backlink{display:inline-flex;align-items:center;gap:8px;color:#111;background:#eef2ff;border:1px solid #dbeafe;padding:8px 12px;border-radius:10px;cursor:pointer;font-weight:700}
+
+  .muted{color:var(--muted)}
+
+  /* Activity selection */
+  .selectable{cursor:pointer;position:relative;transition:transform .12s ease}
+  .selectable:hover{transform:translateY(-1px)}
+  .selectable input[type="radio"]{display:none}
+  .selectable.selected{outline:2px solid #4a90e2; box-shadow:0 0 0 4px rgba(74,144,226,.15)}
+  .selectable h3{margin-top:8px}
+
+  /* Paint-by-Numbers */
+  #paint-wrap{display:grid;grid-template-columns:1fr;gap:12px}
+  @media(min-width:920px){#paint-wrap{grid-template-columns:520px 1fr}}
+  #paint-help{font-size:14px;color:#475569}
+  .legend{display:grid;grid-template-columns:repeat(auto-fit,minmax(148px,1fr));gap:8px}
+  .legend .item{display:flex;align-items:center;gap:10px;background:#fafafa;border:1px solid #eee;border-radius:12px;padding:9px}
+  .swatch{width:24px;height:24px;border-radius:8px;border:1px solid #d1d5db}
+
+  /* Breathing */
+  #breathing-heart{width:220px;margin:12px auto}
+  #breathing-heart svg{width:100%;display:block}
+  #breathing-heart path{transform-origin:50% 50%;transition:transform 1s ease-in-out, fill 0.6s ease}
+  .breathing-desc{color:#475569}
+
+  /* Quotes (poster style) */
+  .quote-poster{
+    position:relative;
+    border-radius:24px;
+    padding:34px 24px;
+    background:
+      radial-gradient(1200px 800px at -10% -20%, #fef08a55 0%, #ffffff00 40%),
+      radial-gradient(1000px 700px at 110% 110%, #bfdbfe66 0%, #ffffff00 45%),
+      linear-gradient(135deg,#f8fafc,#eef2ff 50%,#f8fafc);
+    border:1px solid #e5e7eb;
+    box-shadow: 0 20px 60px rgba(30,64,175,.10);
+    text-align:center;
+  }
+  .quote-mark{
+    position:absolute; font-size:84px; line-height:0; color:#cbd5e1; opacity:.7; font-weight:900
+  }
+  .qm-left{left:14px; top:10px}
+  .qm-right{right:14px; bottom:10px; transform:rotate(180deg)}
+  .quote-text{
+    font-weight:800; font-size:28px; line-height:1.25; letter-spacing:.2px; color:#0b1324;
+    text-shadow:0 1px 0 rgba(255,255,255,.7);
+  }
+  .quote-author{margin-top:10px; color:#475569; font-weight:700; font-size:14px}
+
+  /* Chat */
+  #chat-log{max-height:340px;overflow:auto;border:1px solid #e5e7eb;border-radius:12px;padding:8px;background:#fff}
+  .msg{margin:8px 0;padding:10px 12px;border-radius:12px;max-width:85%}
+  .msg.user{background:#e5effd;margin-left:auto}
+  .msg.bot{background:#f8fafc}
+
+  .page{display:none}
+  .page.active{display:block}
+
+  label{font-weight:700}
+  input[type="text"], input[type="number"], textarea, select{width:100%;padding:10px;border:1px solid #e5e7eb;border-radius:10px}
+  textarea{min-height:90px}
+  details{margin-top:10px}
+</style>
+</head>
+<body>
+<button id="language-toggle">Español</button>
+<header><h1 data-i18n="appTitle">AI Stress Reliever</h1></header>
+
+<main>
+  <div class="stepper" aria-label="Progress">
+    <div class="step active" id="s-welcome" data-step="welcome" data-i18n="stepWelcome">Welcome</div>
+    <div class="step" id="s-select" data-step="select" data-i18n="stepSelect">Activity Selection</div>
+    <div class="step" id="s-activity" data-step="activity" data-i18n="stepActivity">Activity</div>
+    <div class="step" id="s-quotes" data-step="quotes" data-i18n="stepQuotes">Calming Quotes</div>
+    <div class="step" id="s-intake" data-step="intake" data-i18n="stepIntake">Info & Consent</div>
+    <div class="step" id="s-assistant" data-step="assistant" data-i18n="stepAssistant">AI Assistant</div>
+  </div>
+
+  <!-- Welcome -->
+  <section id="page-welcome" class="page active">
+    <div class="card">
+      <h2 data-i18n="welcomeTitle">Welcome</h2>
+      <p data-i18n="welcomeBody">Welcome to the calm-prep space before your first visit with <strong>Dr. Ana Sala</strong>. In a few simple steps, you’ll complete one activity to steady your breathing and focus. Then we’ll share a couple of calming quotes and, if you wish, you can chat with our AI assistant.</p>
+      <div class="actions"><button class="secondary" id="to-select" data-i18n="btnContinue" type="button">Continue</button></div>
+    </div>
+  </section>
+
+  <!-- Activity Selection -->
+  <section id="page-select" class="page">
+    <div class="card">
+      <div class="actions"><span class="backlink" data-back="welcome">← <span data-i18n="back">Back</span></span></div>
+      <h2 data-i18n="selectTitle">Choose one activity</h2>
+      <p data-i18n="selectBody">Please choose and complete <strong>one</strong> of the two activities below: <em>Paint-By-Numbers</em> or <em>Breathing Exercise</em>.</p>
+      <div class="row" id="activity-options">
+        <label class="col card selectable" data-value="paint">
+          <input type="radio" name="activity" value="paint" checked/>
+          <h3 data-i18n="paintTitle">Paint-By-Numbers</h3>
+          <p class="muted" data-i18n="paintDesc">Follow the numbers to discover and enjoy the moment by revealing the final picture using colors.</p>
+        </label>
+        <label class="col card selectable" data-value="breathing">
+          <input type="radio" name="activity" value="breathing"/>
+          <h3 data-i18n="breathingTitle">Breathing Exercise</h3>
+          <p class="muted breathing-desc" data-i18n="breathingDesc">
+            Relax while completing paused breathing techniques to meditate and regulate your overall mood.
+          </p>
+        </label>
+      </div>
+      <div class="actions"><button id="start-activity" data-i18n="btnStart" type="button">Start Activity</button></div>
+    </div>
+  </section>
+
+  <!-- Activity Runner (Paint or Breathing) -->
+  <section id="page-activity" class="page">
+    <div class="card" id="paint-card">
+      <div class="actions"><span class="backlink" data-back="select">← <span data-i18n="back">Back</span></span></div>
+      <h2 data-i18n="paintTitle">Paint-By-Numbers</h2>
+      <p id="paint-help" data-i18n="paintHelp">Tap any numbered shape to fill it with its color. Use the legend and the reference image below.</p>
+
+      <div class="row" id="paint-wrap">
+        <div class="col">
+          <!-- SVG FILE -->
+          <object id="paint-svg-embed" type="image/svg+xml" data="peacock.svg"
+                  style="width:100%;border:1px solid #e5e7eb;border-radius:12px;background:#fff"
+                  aria-label="Paint by numbers peacock">
+            <div style="padding:12px">Loading SVG… If you see this, ensure <code>peacock.svg</code> is in the same folder as this page.</div>
+          </object>
+
+          <div class="actions">
+            <button id="reset-paint" class="ghost" data-i18n="reset" type="button">Reset</button>
+          </div>
+        </div>
+
+        <div class="col">
+          <h3 data-i18n="legendTitle">Color Legend</h3>
+          <div id="legend" class="legend"></div>
+          <p class="muted" data-i18n="legendHint">Tap a numbered area to fill it with its preset color.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Breathing -->
+    <div class="card" id="breathing-card" style="display:none">
+      <div class="actions"><span class="backlink" data-back="select">← <span data-i18n="back">Back</span></span></div>
+      <h2 data-i18n="breathingTitle">Breathing Exercise</h2>
+      <div class="row">
+        <div class="col">
+          <label for="duration-select" data-i18n="durationLabel">Duration:</label>
+          <select id="duration-select">
+            <option value="30">30s</option><option value="45">45s</option><option value="60">60s</option>
+          </select>
+          <div class="actions"><button id="start-breathing" data-i18n="start" type="button">Start</button></div>
+          <div id="breathing-heart" aria-live="polite">
+            <svg viewBox="0 0 100 90" role="img" aria-label="Breathing heart">
+              <path id="heart-path" fill="#ffdfe2" d="M50 82 L16 48 C3 35 5 15 22 9 c10-4 21 0 28 8 c7-8 18-12 28-8 c17 6 19 26 6 39 L50 82z"/>
+            </svg>
+          </div>
+          <div><span data-i18n="stepLabel">Step:</span> <span id="step-display">-</span></div>
+          <div><span data-i18n="timeLeftLabel">Time left:</span> <span id="step-time">0</span>s</div>
+          <div><span data-i18n="overallTimeLabel">Overall left:</span> <span id="overall-time">0</span>s</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="actions">
+      <button id="mark-complete" class="secondary" data-i18n="btnCompleteActivity" type="button">Complete Activity</button>
+    </div>
+    <p class="muted" style="margin-top:6px" data-i18n="continueAnytimeHint">
+      Continue at any time.
+    </p>
+  </section>
+
+  <!-- Calming Quotes -->
+  <section id="page-quotes" class="page">
+    <div class="card">
+      <div class="actions"><span class="backlink" data-back="activity">← <span data-i18n="back">Back</span></span></div>
+      <h2 data-i18n="quotesTitle">Calming Quotes</h2>
+
+      <div class="quote-poster">
+        <div class="quote-mark qm-left">“</div>
+        <div class="quote-mark qm-right">”</div>
+        <div class="quote-text" id="quote-display"></div>
+        <div class="quote-author" id="quote-author">—</div>
+      </div>
+
+      <div class="actions">
+        <button id="new-quote" class="ghost" data-i18n="newQuote" type="button">New Quote</button>
+        <button id="to-intake" data-i18n="btnContinueToIntake" type="button">Continue</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- Information / Consent -->
+  <section id="page-intake" class="page">
+    <div class="card">
+      <div class="actions"><span class="backlink" data-back="quotes">← <span data-i18n="back">Back</span></span></div>
+      <h2 data-i18n="intakeTitle">Information & Consent</h2>
+      <p data-i18n="intakeIntro">To provide better guidance, the AI assistant can use brief personal and medical context.</p>
+
+      <!-- Expanded privacy/consent copy -->
+      <div class="muted" style="margin-bottom:10px" id="intake-privacy">
+        <p data-i18n="intakeSecurity">
+          Your information is used only within this browser session to personalize your experience. It is not stored on a server, sold, or shared with third parties. You remain in control: you may skip any question, withdraw consent, or stop using the assistant at any time without consequence.
+        </p>
+        <ul style="margin-top:4px">
+          <li data-i18n="intakeSecurity2">We request: age, sex, current symptoms, brief medical history, and medications/allergies.</li>
+          <li data-i18n="intakeSecurity3">This context helps tailor tone, pacing, and general guidance. It is not a medical diagnosis nor a substitute for professional care.</li>
+          <li data-i18n="intakeSecurity4">By proceeding, you give informed consent for this information to be used <strong>only during this session</strong> to improve your experience with the AI assistant.</li>
+        </ul>
+      </div>
+
+      <form id="intake-form" class="row" autocomplete="off">
+        <div class="col"><label for="name" data-i18n="intakeName">Name (optional)</label><input id="name" type="text" /></div>
+        <div class="col"><label for="age" data-i18n="intakeAge">Age</label><input id="age" type="number" min="0" max="120" required /></div>
+        <div class="col">
+          <label for="sex" data-i18n="intakeSex">Sex</label>
+          <select id="sex" required>
+            <option value="" selected disabled>—</option>
+            <option value="female" data-i18n="intakeSexF">Female</option>
+            <option value="male" data-i18n="intakeSexM">Male</option>
+            <option value="other" data-i18n="intakeSexO">Other / Prefer not to say</option>
+          </select>
+        </div>
+        <div class="col"><label for="symptoms" data-i18n="intakeSymptoms">Current symptoms (optional)</label><textarea id="symptoms"></textarea></div>
+        <div class="col"><label for="history" data-i18n="intakeHistory">Medical history (optional)</label><textarea id="history"></textarea></div>
+        <div class="col"><label for="meds" data-i18n="intakeMeds">Medications / Allergies (optional)</label><textarea id="meds"></textarea></div>
+        <div class="col">
+          <label style="display:flex;gap:8px;align-items:flex-start"><input id="consent" type="checkbox" />
+            <span data-i18n="intakeConsentLabel">I understand how my data will be used and consent to proceed.</span>
+          </label>
+          <p class="muted" style="margin:6px 0 0" data-i18n="intakeConsentExplain">This information is used only to tailor the assistant's responses during this session and will not be stored after you leave.</p>
+        </div>
+      </form>
+      <div class="actions"><button id="to-assistant" disabled data-i18n="intakeProceed" type="button">Proceed to AI Assistant</button></div>
+    </div>
+  </section>
+
+  <!-- Assistant -->
+  <section id="page-assistant" class="page">
+    <div class="card">
+      <div class="actions"><span class="backlink" data-back="intake">← <span data-i18n="back">Back</span></span></div>
+      <h2 data-i18n="chatbotTitle">Doctor's AI Assistant</h2>
+      <p class="muted" data-i18n="chatDisclaimer">This assistant does not provide medical diagnosis. For urgent or personal medical decisions, consult your clinician.</p>
+      <div id="chat-log" aria-live="polite"></div>
+      <div class="actions">
+        <input type="text" id="chat-input" placeholder="Type your question..." style="flex:1"/>
+        <button id="send-chat" data-i18n="send" type="button">Send</button>
+      </div>
+      <details>
+        <summary data-i18n="devKeyTitle">Developer: use a temporary API key (local demo only)</summary>
+        <div class="row">
+          <div class="col"><input id="temp-key" type="password" placeholder="sk-..." /></div>
+          <div class="col actions"><button id="use-key" class="ghost" data-i18n="devKeyUse" type="button">Use key in this session</button></div>
+        </div>
+        <p class="muted" data-i18n="devKeyNote">Never hard-code keys in client code or commit them to Git. For production, proxy requests via a server.</p>
+      </details>
+    </div>
+  </section>
+</main>
+
+<script>
+  // ---------------- I18N ----------------
+  let currentLang='en';
+  const translations = {
+    en:{
+      appTitle:'AI Stress Reliever',
+      stepWelcome:'Welcome', stepSelect:'Activity Selection', stepActivity:'Activity', stepQuotes:'Calming Quotes', stepIntake:'Info & Consent', stepAssistant:'AI Assistant',
+      welcomeTitle:'Welcome',
+      welcomeBody:'Welcome to the calm-prep space before your first visit with <strong>Dr. Ana Sala</strong>. In a few simple steps, you’ll complete one activity to steady your breathing and focus. Then we’ll share a couple of calming quotes and, if you wish, you can chat with our AI assistant.',
+      btnContinue:'Continue', back:'Back',
+      selectTitle:'Choose one activity',
+      selectBody:'Please choose and complete one of the two activities below: Paint-By-Numbers or Breathing Exercise.',
+      paintTitle:'Paint-By-Numbers', paintDesc:'Follow the numbers to discover and enjoy the moment by revealing the final picture using colors.',
+      paintHelp:'Tap any numbered shape to fill it with its color. Use the legend as your guide.',
+      continueAnytimeHint: 'You can continue at any time.',
+      incompleteConfirm: 'You have not completed the activity. Continue anyway?',
+      legendTitle:'Color Legend', legendHint:'Tap a numbered area to fill it with its preset color.', reset:'Reset',
+      refCaption:'Reference palette used to build the legend.',
+      breathingTitle:'Breathing Exercise', durationLabel:'Duration:', start:'Start', stepLabel:'Step:', timeLeftLabel:'Time left:', overallTimeLabel:'Overall left:',
+      inhale:'Inhale', exhale:'Exhale', hold:'Hold',
+      breathingDesc:'Relax while completing paused breathing techniques to meditate and regulate your overall mood.',
+      btnCompleteActivity:'Complete Activity', btnStart:'Start Activity',
+      quotesTitle:'Calming Quotes', newQuote:'New Quote', btnContinueToIntake:'Continue',
+      intakeTitle:'Information & Consent', intakeIntro:'To provide better guidance, the AI assistant can use brief personal and medical context.',
+      intakeSecurity:'Your information is used only within this browser session to personalize your experience. It is not stored on a server, sold, or shared with third parties. You may skip any question, withdraw consent, or stop using the assistant at any time.',
+      intakeSecurity2:'We request: age, sex, current symptoms, brief medical history, medications/allergies.',
+      intakeSecurity3:'This context helps tailor tone, pacing, and general guidance. It is not a medical diagnosis nor a substitute for professional care.',
+      intakeSecurity4:'By proceeding, you give informed consent for this information to be used only during this session to improve your experience.',
+      intakeName:'Name (optional)', intakeAge:'Age', intakeSex:'Sex',
+      intakeSexF:'Female', intakeSexM:'Male', intakeSexO:'Other / Prefer not to say',
+      intakeSymptoms:'Current symptoms (optional)', intakeHistory:'Medical history (optional)', intakeMeds:'Medications / Allergies (optional)',
+      intakeConsentLabel:'I understand how my data will be used and consent to proceed.',
+      intakeConsentExplain:"This information is used only to tailor the assistant's responses during this session and will not be stored after you leave.",
+      intakeProceed:'Proceed to AI Assistant',
+      chatbotTitle:"Doctor's AI Assistant",
+      chatDisclaimer:'This assistant does not provide medical diagnosis. For urgent or personal medical decisions, consult your clinician.',
+      send:'Send', languageToggle:'Español', placeholder:'Type your question...',
+      completedPaint:'Great job! Painting completed.', completedBreathing:'Nice work! Breathing cycle completed.'
+    },
+    es:{
+      appTitle:'Aliviador de Estrés IA',
+      stepWelcome:'Bienvenida', stepSelect:'Seleccionar Actividad', stepActivity:'Actividad', stepQuotes:'Frases', stepIntake:'Información y Consentimiento', stepAssistant:'Asistente IA',
+      welcomeTitle:'Bienvenida',
+      welcomeBody:'Bienvenido/a al espacio de calma antes de tu primera visita con la <strong>Dra. Ana Sala</strong>. En pocos pasos completarás una actividad para estabilizar la respiración y el enfoque. Luego veremos unas frases tranquilizadoras y, si deseas, podrás chatear con nuestro asistente de IA.',
+      btnContinue:'Continuar', back:'Atrás',
+      selectTitle:'Escoge una actividad',
+      selectBody:'Por favor, escoge y completa una de las dos actividades: Pinta por Números o Ejercicio de Respiración.',
+      paintTitle:'Pinta por Números', paintDesc:'Sigue los números para descubrir y disfrutar el momento al revelar el cuadro final con colores.',
+      paintHelp:'Toca cualquier forma numerada para rellenarla. Usa la leyenda como guía.',
+      continueAnytimeHint: 'Puede continuar en cualquier momento.',
+      incompleteConfirm: 'No has completado la actividad. ¿Deseas continuar?',
+      legendTitle:'Leyenda de Colores', legendHint:'Toca un área con número para rellenarla con su color predefinido.', reset:'Reiniciar',
+      refCaption:'Paleta de referencia usada para construir la leyenda.',
+      breathingTitle:'Ejercicio de Respiración', durationLabel:'Duración:', start:'Comenzar', stepLabel:'Paso:', timeLeftLabel:'Tiempo restante:', overallTimeLabel:'Tiempo total:',
+      inhale:'Inhala', exhale:'Exhala', hold:'Mantén',
+      breathingDesc:'Relájate mientras realizas respiraciones con pausas para meditar y regular tu estado de ánimo.',
+      btnCompleteActivity:'Finalizar Actividad', btnStart:'Comenzar Actividad',
+      quotesTitle:'Frases Tranquilizadoras', newQuote:'Nueva Frase', btnContinueToIntake:'Continuar',
+      intakeTitle:'Información y Consentimiento',
+      intakeIntro:'Para orientarte mejor, el asistente de IA puede usar un breve contexto personal y médico.',
+      intakeSecurity:'Tu información se usa solo en esta sesión del navegador para personalizar tu experiencia. No se almacena en un servidor ni se comparte con terceros. Puedes omitir preguntas, retirar tu consentimiento o detener el uso cuando desees.',
+      intakeSecurity2:'Solicitamos: edad, sexo, síntomas actuales, historial médico breve, medicamentos/alergias.',
+      intakeSecurity3:'Este contexto ayuda a ajustar el tono, el ritmo y la orientación general; no es diagnóstico médico ni reemplaza la atención profesional.',
+      intakeSecurity4:'Al continuar, otorgas tu consentimiento informado para usar esta información solo durante esta sesión para mejorar tu experiencia.',
+      intakeName:'Nombre (opcional)', intakeAge:'Edad', intakeSex:'Sexo',
+      intakeSexF:'Femenino', intakeSexM:'Masculino', intakeSexO:'Otro / Prefiero no decirlo',
+      intakeSymptoms:'Síntomas actuales (opcional)', intakeHistory:'Historial médico (opcional)', intakeMeds:'Medicamentos / Alergias (opcional)',
+      intakeConsentLabel:'Entiendo cómo se usarán mis datos y doy mi consentimiento para continuar.',
+      intakeConsentExplain:'Esta información se usa únicamente para adaptar las respuestas del asistente durante esta sesión y no se almacenará cuando salgas.',
+      intakeProceed:'Ir al Asistente de IA',
+      chatbotTitle:'Asistente de IA del Doctor',
+      chatDisclaimer:'Este asistente no ofrece diagnósticos. Para decisiones médicas urgentes o personales, consulta a tu médico.',
+      send:'Enviar', languageToggle:'English', placeholder:'Escribe tu pregunta...',
+      completedPaint:'¡Muy bien! Pintura completada.', completedBreathing:'¡Excelente! Respiración completada.'
+    }
+  };
+  function t(k){return translations[currentLang][k]||k}
+  function updateLanguage(){
+    document.querySelectorAll('[data-i18n]').forEach(el=>{
+      const key=el.getAttribute('data-i18n');
+      const htmlKeys=['welcomeBody'];
+      if(htmlKeys.includes(key)) el.innerHTML=t(key); else el.textContent=t(key);
+    });
+    document.getElementById('language-toggle').textContent=t('languageToggle');
+    const chatInput=document.getElementById('chat-input'); if(chatInput) chatInput.placeholder=t('placeholder');
+    renderLegend();
+  }
+  document.getElementById('language-toggle').addEventListener('click',()=>{currentLang=currentLang==='en'?'es':'en';updateLanguage();});
+
+  // ---------------- Navigation ----------------
+  const ORDER=['welcome','select','activity','quotes','intake','assistant'];
+  const reached=new Set(['welcome']);
+  function go(page){
+    ORDER.forEach(p=>{
+      document.getElementById('page-'+p).classList.toggle('active',p===page);
+      document.getElementById('s-'+p).classList.toggle('active',p===page);
+    });
+    reached.add(page); window.scrollTo({top:0,behavior:'smooth'});
+  }
+  document.querySelectorAll('.stepper .step').forEach(step=>{
+    step.addEventListener('click',()=>{const page=step.getAttribute('data-step'); if(reached.has(page)) go(page);});
+  });
+  document.querySelectorAll('[data-back]').forEach(b=>b.addEventListener('click',()=>go(b.getAttribute('data-back'))));
+  document.getElementById('to-select').addEventListener('click',()=>go('select'));
+
+  // ---------------- Activity selection highlight ----------------
+  const optionLabels=[...document.querySelectorAll('#activity-options .selectable')];
+  function setSelected(val){
+    optionLabels.forEach(l=>{
+      l.classList.toggle('selected',l.getAttribute('data-value')===val);
+      l.querySelector('input[type="radio"]').checked=l.classList.contains('selected');
+    });
+  }
+  optionLabels.forEach(l=>l.addEventListener('click',()=>setSelected(l.getAttribute('data-value'))));
+  setSelected('paint');
+  document.getElementById('start-activity').addEventListener('click',()=>{
+    const choice=document.querySelector('input[name="activity"]:checked')?.value||'paint';
+    document.getElementById('paint-card').style.display=(choice==='paint')?'block':'none';
+    document.getElementById('breathing-card').style.display=(choice==='breathing')?'block':'none';
+    activityDone = false; // user is starting fresh
+    go('activity');
+  });
+
+  // Tracks whether the current activity was completed (paint fully colored OR breathing finished)
+  let activityDone = false;
+
+  // Legend colors (RRGGBB[AA]) → CSS color 
+  const RAW_LEGEND = {
+    1:'55ddffff',
+    2:'00ff00ff',
+    3:'ffff00ff',
+    4:'8080ffff',
+    5:'a05a2cff',
+    6:'ffdd55ff',
+    7:'00aa44ff',
+    8:'f216fffb',
+    9:'ff0066ff',
+    10:'d35f5f',   // no alpha provided → will default to FF
+    11:'ff7f2aff'
+  };
+
+  function hexToCss(hex){
+    // normalize (strip #, lowercase)
+    let s = (hex||'').replace(/^#/, '').toLowerCase();
+    if(s.length===6) s = s + 'ff'; // default opaque
+    if(s.length!==8){ console.warn('Bad hex:', hex); return '#cccccc'; }
+    const r = parseInt(s.slice(0,2),16);
+    const g = parseInt(s.slice(2,4),16);
+    const b = parseInt(s.slice(4,6),16);
+    const a = parseInt(s.slice(6,8),16) / 255;
+    // return rgba() so all browsers get alpha correctly
+    return `rgba(${r}, ${g}, ${b}, ${a.toFixed(3)})`;
+  }
+
+  
+  // Builds PRESET_COLORS from RAW_LEGEND
+  const PRESET_COLORS = Object.keys(RAW_LEGEND).map(k=>{
+    const id = Number(k);
+    return {
+      id,
+      hex: hexToCss(RAW_LEGEND[id]),
+      en: `#${id}`,         // simple labels (you can name them if you want)
+      es: `#${id}`
+    };
+  });
+
+  function renderLegend(){
+    const wrap=document.getElementById('legend'); if(!wrap) return; wrap.innerHTML='';
+    PRESET_COLORS.forEach(c=>{
+      const item=document.createElement('div'); item.className='item';
+      const sw=document.createElement('span'); sw.className='swatch'; sw.style.background=c.hex;
+      const label=document.createElement('span'); label.textContent=String(c.id);
+      item.appendChild(sw); item.appendChild(label); wrap.appendChild(item);
+    });
+  }
+
+  function colorForId(id){return (PRESET_COLORS.find(c=>c.id==id)||PRESET_COLORS[0]).hex}
+
+  // ---------------- Paint-by-Numbers (EXTERNAL SVG with inline fallback) ----------------
+  const LEGEND_IDS = new Set([1,2,3,4,5,6,7,8,9,10,11]);
+  let svgRoot = null;   // <svg> element (either inside <object> or inlined)
+  let svgDoc  = null;   // document of the <object> (if using <object>)
+
+  function attachPaintHandlers(rootSvg){
+    svgRoot = rootSvg;
+    if(!svgRoot) { console.warn('No SVG root to bind'); return; }
+
+    // Identify legend root if present so we exclude it from paintables
+    const legendRoot = svgRoot.querySelector('[data-role="legend"], #legend');
+    const inLegend = (el) => legendRoot ? legendRoot.contains(el) : false;
+
+    // 1. Color all printed numbers by their data-id; make them click-through
+    svgRoot.querySelectorAll('text[data-id]').forEach(lbl=>{
+      const id = Number(lbl.getAttribute('data-id'));
+      const col = colorForId(id);
+      if (col){
+        lbl.setAttribute('fill', col);
+        lbl.setAttribute('stroke', 'none');
+      }
+      lbl.style.pointerEvents = 'none'; // let clicks pass to shapes
+    });
+
+    // 2. Paintable shapes = any [data-id] that is NOT text and NOT inside legend
+    const allWithId = [...svgRoot.querySelectorAll('[data-id]')];
+    const paintables = allWithId.filter(el =>
+      el.tagName.toLowerCase() !== 'text' && !inLegend(el)
+    );
+
+    if(paintables.length === 0){
+      alert('No paintable shapes found. Ensure each region has data-id="1..11".');
+      return;
+    }
+
+    // Provide sensible defaults and bind clicks
+    paintables.forEach(el=>{
+      if(!el.getAttribute('fill')) el.setAttribute('fill','white');
+      if(!el.getAttribute('stroke')) el.setAttribute('stroke','#222');
+      if(!el.getAttribute('stroke-width')) el.setAttribute('stroke-width','1');
+      el.style.cursor='pointer';
+      el.addEventListener('click',()=>{
+        const id = Number(el.getAttribute('data-id')) || 1;
+        el.setAttribute('fill', colorForId(id));
+
+        // OPTIONAL behaviors:
+        svgRoot.querySelectorAll(`text[data-id="${id}"]`).forEach(t => t.remove()); // hide number after painting
+        // svgRoot.querySelectorAll(`text[data-id="${id}"]`).forEach(t => t.setAttribute('opacity','0.2')); // or fade it
+
+        checkPaintComplete_external();
+      });
+    });
+
+    // Reset (numbers stay colored; regions go back to white)
+    const resetBtn = document.getElementById('reset-paint');
+    if(resetBtn){
+      resetBtn.onclick = ()=>{
+        paintables.forEach(el=> el.setAttribute('fill','white'));
+        activityDone = false;
+      };
+    }
+
+    checkPaintComplete_external();
+    // Refresh right-side HTML legend (uses PRESET_COLORS from RAW_LEGEND)
+    renderLegend();
+  }
+
+  function checkPaintComplete_external(){
+    if(!svgRoot){ activityDone = false; return; }
+    const shapes = svgRoot.querySelectorAll('[data-id]');
+    let done = true;
+    shapes.forEach(s=>{
+      const f = (s.getAttribute('fill')||'').toLowerCase();
+      if(!f || f==='white' || f==='#fff' || f==='rgb(255, 255, 255)') done = false;
+    });
+    const wasDone = activityDone;
+    activityDone = done;
+    if(done && !wasDone){
+      toast( (currentLang==='es') ? '¡Muy bien! Pintura completada.' : 'Great job! Painting completed.' );
+    }
+  }
+
+  async function bindPeacock(){
+    const obj = document.getElementById('paint-svg-embed');
+    if(!obj){ console.warn('paint-svg-embed not found'); return; }
+
+    const onLoad = async () => {
+      try{
+        // Normal <object> route
+        svgDoc = obj.contentDocument;
+        const root = svgDoc?.documentElement;
+        if(root && root.nodeName.toLowerCase()==='svg'){
+          attachPaintHandlers(root);
+          return;
+        }
+      }catch(e){
+        // fall through to fetch-inline
+      }
+      // Fallback: fetch the SVG and inline it (bypasses file:// restrictions)
+      await fetchAndInlineSVG(obj.getAttribute('data'), obj);
+    };
+
+    // Already loaded?
+    if(obj.contentDocument && obj.contentDocument.documentElement){
+      onLoad();
+    }else{
+      obj.addEventListener('load', onLoad, { once:true });
+    }
+  }
+
+  async function fetchAndInlineSVG(url, objectEl){
+    try{
+      const res = await fetch(url);
+      const text = await res.text();
+      let inlineHost = document.getElementById('paint-inline');
+      if(!inlineHost){
+        inlineHost = document.createElement('div');
+        inlineHost.id = 'paint-inline';
+        inlineHost.style.border = '1px solid #e5e7eb';
+        inlineHost.style.borderRadius = '12px';
+        inlineHost.style.background = '#fff';
+        inlineHost.style.marginTop = '8px';
+        objectEl.insertAdjacentElement('afterend', inlineHost);
+      }
+      inlineHost.innerHTML = text;
+      const inlineSvg = inlineHost.querySelector('svg');
+      if(!inlineSvg){
+        alert('Could not inline peacock.svg (no <svg> found).');
+        return;
+      }
+      // Hide the <object> since we’re using inline now
+      objectEl.style.display = 'none';
+      attachPaintHandlers(inlineSvg);
+    }catch(err){
+      console.error('Failed to inline peacock.svg:', err);
+      alert('Could not load peacock.svg. Please make sure it is in the same folder as this page.');
+    }
+  }
+
+  // ---------------- Breathing cycles ----------------
+  let breathingInterval;
+
+  function startBreathing(){
+    clearInterval(breathingInterval);
+    const total=parseInt(document.getElementById('duration-select').value,10);
+    let overall=total, phase=0, phaseTime=5;
+    const heart=document.getElementById('heart-path');
+    const stepDisplay=document.getElementById('step-display');
+    const stepTime=document.getElementById('step-time');
+    const overallDisplay=document.getElementById('overall-time');
+    const steps=['inhale','hold','exhale','hold'];
+
+    function updatePhase(){
+      stepDisplay.textContent=t(steps[phase]); stepTime.textContent=phaseTime;
+      if(steps[phase]==='inhale'){heart.setAttribute('fill','#c8f7c5');heart.style.transform='scale(1.18)';}
+      else if(steps[phase]==='exhale'){heart.setAttribute('fill','#f7c5c5');heart.style.transform='scale(1.0)';}
+      else {heart.setAttribute('fill','#ffdfe2');}
+    }
+
+    overallDisplay.textContent=overall; updatePhase();
+    breathingInterval=setInterval(()=>{
+      phaseTime--; overall--; stepTime.textContent=phaseTime; overallDisplay.textContent=overall;
+      if(phaseTime<=0){phase=(phase+1)%4; phaseTime=5; updatePhase();}
+      if(overall<=0){clearInterval(breathingInterval); stepDisplay.textContent='-'; heart.setAttribute('fill','#ffdfe2'); heart.style.transform='scale(1)';
+        activityDone = true;
+        toast(currentLang==='en'?'Nice work! Breathing cycle completed.':'¡Excelente! Respiración completada.');
+      }
+    },1000);
+  }
+
+  document.getElementById('start-breathing').addEventListener('click',startBreathing);
+
+  // ---------------- Quotes (full list + no-repeat shuffle bag) ----------------
+  const QUOTES = {
+    es: [
+      "Respira. Eres más fuerte de lo que piensas.",
+      "Cada día es una segunda oportunidad.",
+      "No estás solo en este camino.",
+      "Como el canto del coquí, tu valentía resuena en la noche.",
+      "Los vientos de El Yunque susurran fuerza a tu corazón.",
+      "Cada amanecer sobre San Juan trae nueva esperanza.",
+      "Lleva el calor del sol caribeño dentro de ti.",
+      "En el ritmo de la plena, encuentra tu latido.",
+      "El espíritu boricua corre por tus venas.",
+      "Tu resiliencia es tan firme como las murallas del Morro.",
+      "Como un árbol de ceiba, mantente erguido ante la tormenta.",
+      "Las olas chocan, pero la orilla permanece.",
+      "Deja que la nana del coquí calme tu mente.",
+      "Desde los cafetales hasta las calles, la determinación te guía.",
+      "Recuerda el baile de bomba: fuerza envuelta en gracia.",
+      "La esperanza florece como el flamboyán en verano.",
+      "Tu corazón late con el orgullo de Puerto Rico.",
+      "Las tormentas pasan, pero tu espíritu perdura.",
+      "Estás hecho de la misma piedra que las montañas de Cayey.",
+      "Como una chiringa en Loíza, puedes elevarte con la brisa.",
+      "La marea se retira, pero siempre regresa.",
+      "Que el aroma del sofrito te recuerde hogar y consuelo.",
+      "El coraje nace en las calles del Viejo San Juan.",
+      "Lleva la canción del jíbaro en el alma.",
+      "En cada reto, escucha un “pa’lante” que te empuja.",
+      "Como el plátano en el pilón, te forjas bajo presión.",
+      "Las estrellas sobre Vieques iluminan tu camino.",
+      "Deja que la brisa caribeña enfríe tus preocupaciones.",
+      "El canto del coquí dice que perteneces aquí.",
+      "De las dificultades, los puertorriqueños sacan alegría.",
+      "Tu sonrisa es tan brillante como los amaneceres caribeños.",
+      "El ritmo del mar enseña calma.",
+      "Recuerda, la lluvia de El Yunque nutre el crecimiento.",
+      "La fuerza corre honda como las raíces del mangle.",
+      "Cada fiesta comienza con esperanza.",
+      "Lleva la calidez de la isla donde vayas.",
+      "Como un loro en el dosel, tu voz importa.",
+      "El amor de tu comunidad te envuelve.",
+      "Como el faro de Cabo Rojo, tu luz guía a otros.",
+      "La empatía fluye como dulce guarapo.",
+      "Tu camino es una salsa: a veces rápido, siempre lleno de vida.",
+      "El tambor de la plena te recuerda: estás vivo.",
+      "Las montañas de la isla han visto tormentas y aún se mantienen.",
+      "Tu espíritu baila como un vejigante en carnaval.",
+      "La esperanza brilla como las bahías bioluminiscentes.",
+      "Que el sabor de un pastel te brinde consuelo.",
+      "Eres parte de un pueblo que se levanta una y otra vez.",
+      "Que el pequeño coquí te enseñe gran valentía.",
+      "La bondad boricua es tu escudo.",
+      "Como un cuatro, tu historia tiene muchas cuerdas.",
+      "A través del mar, el amor borinqueño te alcanza.",
+      "Incluso en silencio, la isla canta dentro de ti.",
+      "Llevas el legado de luchadores y soñadores."
+    ],
+    en: [
+      "Breathe. You are stronger than you think.",
+      "Every day is a second chance.",
+      "You are not alone in this journey.",
+      "Like the coquí's song, your courage sings softly through the night.",
+      "The winds of El Yunque whisper strength into your heart.",
+      "Every sunrise over San Juan brings new hope.",
+      "Carry the warmth of the Caribbean sun within you.",
+      "In the rhythm of the plena, find your heartbeat.",
+      "The spirit of Borinquen flows through your veins.",
+      "Your resilience is as steady as the Morro's walls.",
+      "Like a ceiba tree, stand tall against the storm.",
+      "Waves may crash, but the shore remains.",
+      "Let the coquí's lullaby ease your mind.",
+      "From coffee fields to city streets, determination guides you.",
+      "Remember the dance of bomba—strength wrapped in grace.",
+      "Hope grows like flamboyán flowers in summer.",
+      "Your heart beats with the pride of Puerto Rico.",
+      "Storms pass, but your spirit endures.",
+      "You are crafted from the same stone as the mountains of Cayey.",
+      "Like a kite over Loíza, you can rise above the breeze.",
+      "The tide pulls back, but always returns.",
+      "Let the smell of sofrito remind you of home and comfort.",
+      "Courage is born on the streets of Old San Juan.",
+      "Carry the song of the jíbaro in your soul.",
+      "In every challenge, hear “pa’lante” pushing you forward.",
+      "Like plantain in a pilón, you're forged under pressure.",
+      "The stars over Vieques light your path.",
+      "Let the Caribbean breeze cool your worries.",
+      "The coquí's call says you belong here.",
+      "From hardships, Puerto Ricans craft joy.",
+      "Your smile is as bright as Caribbean sunrises.",
+      "The ocean's rhythm teaches calm.",
+      "Remember, El Yunque's rain nourishes growth.",
+      "Strength runs deep like the roots of a mangrove.",
+      "Every fiesta begins with hope.",
+      "Carry the island's warmth wherever you go.",
+      "Like a parrot in the canopy, your voice matters.",
+      "The love of your community surrounds you.",
+      "Like the lighthouse in Cabo Rojo, your light guides others.",
+      "Empathy flows like sweet guarapo.",
+      "Your journey is a salsa—sometimes fast, always full of life.",
+      "The drumbeat of plena reminds you: you are alive.",
+      "The island's mountains have seen storms and still stand.",
+      "Your spirit dances like a vejigante in carnival.",
+      "Hope sparkles like bioluminescent bays.",
+      "Let the taste of pasteles bring comfort.",
+      "You are part of a people who rebuild again and again.",
+      "Let the coquí's tiny frame teach big bravery.",
+      "The kindness of Puerto Ricans is your shield.",
+      "Like a music cuatro, your story has many strings.",
+      "Across the sea, Borinquen's love reaches you.",
+      "Even in silence, the island hums within.",
+      "You carry the legacy of fighters and dreamers."
+    ]
+  };
+
+  let quoteBags = { en: [], es: [] };
+  function shuffle(array){ for(let i=array.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [array[i],array[j]]=[array[j],array[i]];} return array; }
+  function refillBag(lang){ const size=QUOTES[lang].length; quoteBags[lang]=shuffle([...Array(size).keys()]); }
+  function getNextQuote(lang){ if(!quoteBags[lang]||quoteBags[lang].length===0) refillBag(lang); const idx=quoteBags[lang].pop(); return { q: QUOTES[lang][idx], a: "" }; }
+
+  function showQuote(){
+    const { q, a } = getNextQuote(currentLang||'en');
+    const elQ=document.getElementById('quote-display');
+    const elA=document.getElementById('quote-author');
+    if(elQ) elQ.textContent=q;
+    if(elA) elA.textContent=a && a.trim()? '— '+a : '—';
+  }
+  document.getElementById('new-quote').addEventListener('click', showQuote);
+  document.getElementById('mark-complete').addEventListener('click', ()=>{
+    if(!activityDone){
+      const ok = confirm( t('incompleteConfirm') );
+      if(!ok) return;
+    }
+    go('quotes');
+    showQuote();
+  });
+  document.getElementById('to-intake').addEventListener('click', ()=> go('intake'));
+
+  // ---------------- Intake validation ----------------
+  const intakeForm=document.getElementById('intake-form');
+  const consent=document.getElementById('consent');
+  const toAssistant=document.getElementById('to-assistant');
+  function validateIntake(){
+    const okConsent=consent.checked;
+    const age=document.getElementById('age').value;
+    const sex=document.getElementById('sex').value;
+    toAssistant.disabled=!(okConsent && age && sex);
+  }
+  intakeForm.addEventListener('input',validateIntake);
+  consent.addEventListener('change',validateIntake);
+
+  const USER_CONTEXT={};
+  toAssistant.addEventListener('click',()=>{
+    USER_CONTEXT.name=document.getElementById('name').value.trim();
+    USER_CONTEXT.age=document.getElementById('age').value.trim();
+    USER_CONTEXT.sex=document.getElementById('sex').value;
+    USER_CONTEXT.symptoms=document.getElementById('symptoms').value.trim();
+    USER_CONTEXT.history=document.getElementById('history').value.trim();
+    USER_CONTEXT.meds=document.getElementById('meds').value.trim();
+    go('assistant');
+  });
+
+  // ---------------- Assistant (demo-friendly) ----------------
+  let OPENAI_KEY='';
+  document.getElementById('use-key').addEventListener('click',()=>{OPENAI_KEY=document.getElementById('temp-key').value.trim(); toast(OPENAI_KEY?'Key loaded':'No key');});
+  const chatLog=document.getElementById('chat-log');
+  function appendChat(role,text){ const div=document.createElement('div'); div.className='msg '+(role==='user'?'user':'bot'); div.textContent=text; chatLog.appendChild(div); chatLog.scrollTop=chatLog.scrollHeight; }
+  function buildSystemPrompt(){
+    const baseEn="You are a friendly oncology clinic assistant helping patients calm down and prepare. Be concise, supportive, and avoid medical diagnosis. If asked medical questions, provide general guidance and recommend consulting the clinician.";
+    const baseEs="Eres un asistente amable de la clínica de oncología para ayudar a calmar y preparar a los pacientes. Sé conciso, solidario y evita diagnosticar. Si preguntan temas médicos, ofrece orientación general y recomienda consultar a su médico.";
+    const ctx=USER_CONTEXT;
+    const ctxLineEn=`Context: name=${ctx.name||'-'}, age=${ctx.age||'-'}, sex=${ctx.sex||'-'}, symptoms=${ctx.symptoms||'-'}, history=${ctx.history||'-'}, meds=${ctx.meds||'-'}.`;
+    const ctxLineEs=`Contexto: nombre=${ctx.name||'-'}, edad=${ctx.age||'-'}, sexo=${ctx.sex||'-'}, síntomas=${ctx.symptoms||'-'}, historial=${ctx.history||'-'}, meds=${ctx.meds||'-'}.`;
+    return (currentLang==='en'? baseEn+" "+ctxLineEn : baseEs+" "+ctxLineEs);
+  }
+  async function sendMessage(){
+    const input=document.getElementById('chat-input'); const msg=input.value.trim(); if(!msg) return;
+    appendChat('user',msg); input.value='';
+    if(OPENAI_KEY){
+      try{
+        const res=await fetch('https://api.openai.com/v1/chat/completions',{
+          method:'POST',
+          headers:{'Content-Type':'application/json','Authorization':'Bearer '+OPENAI_KEY},
+          body:JSON.stringify({model:'gpt-4o-mini',messages:[{role:'system',content:buildSystemPrompt()},{role:'user',content:msg}]})
+        });
+        const data=await res.json(); const text=data?.choices?.[0]?.message?.content || '...'; appendChat('bot',text); return;
+      }catch(e){ appendChat('bot', currentLang==='en'?'(API error — using offline reply)':'(Error de API — usando respuesta local)'); }
+    }
+    appendChat('bot', currentLang==='en'
+      ? 'I hear you. Try a 4-4-6 breath: inhale 4s, hold 4s, exhale 6s. Want another grounding tip or a calming quote?'
+      : 'Te escucho. Prueba respiración 4-4-6: inhala 4s, mantén 4s, exhala 6s. ¿Quieres otra técnica de calma o una frase?');
+  }
+  document.getElementById('send-chat').addEventListener('click',sendMessage);
+  document.getElementById('chat-input').addEventListener('keydown',e=>{ if(e.key==='Enter') sendMessage(); });
+
+  // ---------------- Tiny toast ----------------
+  function toast(text){
+    const el=document.createElement('div'); el.textContent=text;
+    el.style.position='fixed'; el.style.bottom='16px'; el.style.left='50%'; el.style.transform='translateX(-50%)';
+    el.style.background='#111'; el.style.color='#fff'; el.style.padding='8px 12px'; el.style.borderRadius='999px'; el.style.zIndex='9999'; el.style.opacity='0.95';
+    document.body.appendChild(el); setTimeout(()=>el.remove(),1800);
+  }
+
+  // ---------------- Init ----------------
+  updateLanguage();
+  renderLegend();
+  bindPeacock();
+  // Prepare quote bags
+  (function(){ ['en','es'].forEach(refillBag); })();
+</script>
+</body>
+</html>
