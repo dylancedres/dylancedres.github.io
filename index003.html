@@ -33,6 +33,7 @@
   button.ghost{background:transparent;border:1px solid #e5e7eb;color:#111}
   button:disabled{opacity:.55;cursor:not-allowed}
   .backlink{display:inline-flex;align-items:center;gap:8px;color:#111;background:#eef2ff;border:1px solid #dbeafe;padding:8px 12px;border-radius:10px;cursor:pointer;font-weight:700}
+  .backlink{ display:none !important; }
 
   .muted{color:var(--muted)}
 
@@ -153,7 +154,7 @@
     <div class="card" id="paint-card">
       <div class="actions"><span class="backlink" data-back="select">← <span data-i18n="back">Back</span></span></div>
       <h2 data-i18n="paintTitle">Paint-By-Numbers</h2>
-      <p id="paint-help" data-i18n="paintHelp">Tap any numbered shape to fill it with its color. Use the legend and the reference image below.</p>
+      <p id="paint-help" data-i18n="paintHelp">Tap any numbered shape to fill it with its color. Use the legend as your guide.</p>
 
       <div class="row" id="paint-wrap">
         <div class="col">
@@ -211,20 +212,33 @@
   <!-- Calming Quotes -->
   <section id="page-quotes" class="page">
     <div class="card">
-      <div class="actions"><span class="backlink" data-back="activity">← <span data-i18n="back">Back</span></span></div>
+      <!-- Back disabled globally later -->
       <h2 data-i18n="quotesTitle">Calming Quotes</h2>
 
-      <div class="quote-poster">
-        <div class="quote-mark qm-left">“</div>
-        <div class="quote-mark qm-right">”</div>
-        <div class="quote-text" id="quote-display"></div>
-        <div class="quote-author" id="quote-author">—</div>
+      <div class="row">
+        <div class="col">
+          <div class="quote-poster" aria-label="Quote in English">
+            <div class="quote-mark qm-left">“</div>
+            <div class="quote-mark qm-right">”</div>
+            <div class="quote-text" id="quote-display-en"></div>
+            <div class="quote-author" id="quote-author-en">—</div>
+          </div>
+        </div>
+        <div class="col">
+          <div class="quote-poster" aria-label="Frase en Español">
+            <div class="quote-mark qm-left">“</div>
+            <div class="quote-mark qm-right">”</div>
+            <div class="quote-text" id="quote-display-es"></div>
+            <div class="quote-author" id="quote-author-es">—</div>
+          </div>
+        </div>
       </div>
 
       <div class="actions">
         <button id="new-quote" class="ghost" data-i18n="newQuote" type="button">New Quote</button>
         <button id="to-intake" data-i18n="btnContinueToIntake" type="button">Continue</button>
       </div>
+      <p class="muted" id="quote-limit-hint" style="margin-top:6px"></p>
     </div>
   </section>
 
@@ -273,25 +287,24 @@
     </div>
   </section>
 
-  <!-- Assistant -->
+  <!-- Assistant (Tailored Questions, no chat) -->
   <section id="page-assistant" class="page">
     <div class="card">
-      <div class="actions"><span class="backlink" data-back="intake">← <span data-i18n="back">Back</span></span></div>
-      <h2 data-i18n="chatbotTitle">Doctor's AI Assistant</h2>
-      <p class="muted" data-i18n="chatDisclaimer">This assistant does not provide medical diagnosis. For urgent or personal medical decisions, consult your clinician.</p>
-      <div id="chat-log" aria-live="polite"></div>
+      <h2 data-i18n="assistantTitle">Questions for Your Oncologist</h2>
+      <p class="muted" id="assistant-intro"></p>
+
+      <h3 data-i18n="qsTitle">Suggested questions (5)</h3>
+      <ol id="onc-qs" style="line-height:1.5;"></ol>
+
       <div class="actions">
-        <input type="text" id="chat-input" placeholder="Type your question..." style="flex:1"/>
-        <button id="send-chat" data-i18n="send" type="button">Send</button>
+        <button id="regen-qs" class="ghost" type="button" data-i18n="regenQs">Regenerate</button>
+        <button id="copy-qs" type="button" data-i18n="copyQs">Copy All</button>
+        <button id="download-qs" class="secondary" type="button" data-i18n="downloadQs">Download .txt</button>
       </div>
-      <details>
-        <summary data-i18n="devKeyTitle">Developer: use a temporary API key (local demo only)</summary>
-        <div class="row">
-          <div class="col"><input id="temp-key" type="password" placeholder="sk-..." /></div>
-          <div class="col actions"><button id="use-key" class="ghost" data-i18n="devKeyUse" type="button">Use key in this session</button></div>
-        </div>
-        <p class="muted" data-i18n="devKeyNote">Never hard-code keys in client code or commit them to Git. For production, proxy requests via a server.</p>
-      </details>
+
+      <p class="muted" style="margin-top:8px" data-i18n="assistantFootnote">
+        These suggestions are based on the information you entered and are not medical advice.
+      </p>
     </div>
   </section>
 </main>
@@ -333,7 +346,14 @@
       chatbotTitle:"Doctor's AI Assistant",
       chatDisclaimer:'This assistant does not provide medical diagnosis. For urgent or personal medical decisions, consult your clinician.',
       send:'Send', languageToggle:'Español', placeholder:'Type your question...',
-      completedPaint:'Great job! Painting completed.', completedBreathing:'Nice work! Breathing cycle completed.'
+      completedPaint:'Great job! Painting completed.', completedBreathing:'Nice work! Breathing cycle completed.',
+      assistantTitle:'Questions for Your Oncologist',
+      qsTitle:'Suggested questions (5)',
+      regenQs:'Regenerate',
+      copyQs:'Copy All',
+      downloadQs:'Download .txt',
+      assistantIntroTemplate:(name, sexAge)=>`Here are 5 questions${name?`, ${name}`:''} you can take to your visit${sexAge?` (${sexAge})`:''}. Use them to clarify doubts, set priorities, and replace worries with a clear plan.`,
+      assistantFootnote:'These suggestions are based on the information you entered and are not medical advice.'
     },
     es:{
       appTitle:'Aliviador de Estrés IA',
@@ -369,7 +389,14 @@
       chatbotTitle:'Asistente de IA del Doctor',
       chatDisclaimer:'Este asistente no ofrece diagnósticos. Para decisiones médicas urgentes o personales, consulta a tu médico.',
       send:'Enviar', languageToggle:'English', placeholder:'Escribe tu pregunta...',
-      completedPaint:'¡Muy bien! Pintura completada.', completedBreathing:'¡Excelente! Respiración completada.'
+      completedPaint:'¡Muy bien! Pintura completada.', completedBreathing:'¡Excelente! Respiración completada.',
+      assistantTitle:'Preguntas para tu oncólogo/a',
+      qsTitle:'Preguntas sugeridas (5)',
+      regenQs:'Regenerar',
+      copyQs:'Copiar todo',
+      downloadQs:'Descargar .txt',
+      assistantIntroTemplate:(name, sexAge)=>`Aquí tienes 5 preguntas${name?`, ${name}`:''} para llevar a tu cita${sexAge?` (${sexAge})`:''}. Úsalas para aclarar dudas, priorizar necesidades y cambiar la preocupación por un plan claro.`,
+      assistantFootnote:'Estas sugerencias se basan en la información que ingresaste y no constituyen consejo médico.'
     }
   };
 
@@ -384,6 +411,13 @@
     document.getElementById('language-toggle').textContent=t('languageToggle');
     const chatInput=document.getElementById('chat-input'); if(chatInput) chatInput.placeholder=t('placeholder');
     renderLegend();
+    updateQuoteHint();
+    disableNewQuoteIfNeeded();
+
+    if(document.getElementById('page-assistant')?.classList.contains('active')){
+      renderAssistant();
+}
+
   }
   document.getElementById('language-toggle').addEventListener('click',()=>{currentLang=currentLang==='en'?'es':'en';updateLanguage();});
 
@@ -398,10 +432,21 @@
     reached.add(page); window.scrollTo({top:0,behavior:'smooth'});
   }
   document.querySelectorAll('.stepper .step').forEach(step=>{
-    step.addEventListener('click',()=>{const page=step.getAttribute('data-step'); if(reached.has(page)) go(page);});
+  step.style.cursor = 'default';
+  step.addEventListener('click', e => e.preventDefault()); // display-only
   });
   document.querySelectorAll('[data-back]').forEach(b=>b.addEventListener('click',()=>go(b.getAttribute('data-back'))));
   document.getElementById('to-select').addEventListener('click',()=>go('select'));
+
+  // Tracks whether the current activity was completed (paint fully colored OR breathing finished)
+  let activityDone = false;
+  
+  // Current legend pick (the color number user selected), null = none picked
+  let currentPick = null;
+
+  // Persist the user's chosen activity across steps (session only)
+  let SELECTED_ACTIVITY = sessionStorage.getItem('selectedActivity') || 'paint';
+
 
   // ---------------- Activity selection highlight ----------------
   const optionLabels=[...document.querySelectorAll('#activity-options .selectable')];
@@ -410,22 +455,23 @@
       l.classList.toggle('selected',l.getAttribute('data-value')===val);
       l.querySelector('input[type="radio"]').checked=l.classList.contains('selected');
     });
+    SELECTED_ACTIVITY = val;
+    sessionStorage.setItem('selectedActivity', val);
   }
   optionLabels.forEach(l=>l.addEventListener('click',()=>setSelected(l.getAttribute('data-value'))));
-  setSelected('paint');
+  setSelected(SELECTED_ACTIVITY || 'paint');
   document.getElementById('start-activity').addEventListener('click',()=>{
-    const choice=document.querySelector('input[name="activity"]:checked')?.value||'paint';
-    document.getElementById('paint-card').style.display=(choice==='paint')?'block':'none';
-    document.getElementById('breathing-card').style.display=(choice==='breathing')?'block':'none';
-    activityDone = false; // user is starting fresh
+    const choice = document.querySelector('input[name="activity"]:checked')?.value || SELECTED_ACTIVITY || 'paint';
+    SELECTED_ACTIVITY = choice;
+    sessionStorage.setItem('selectedActivity', choice);
+
+    document.getElementById('paint-card').style.display = (choice==='paint')?'block':'none';
+    document.getElementById('breathing-card').style.display = (choice==='breathing')?'block':'none';
+
+    activityDone = false;
     go('activity');
   });
 
-  // Tracks whether the current activity was completed (paint fully colored OR breathing finished)
-  let activityDone = false;
-  
-  // Current legend pick (the color number user selected), null = none picked
-  let currentPick = null;
 
   // Legend colors (RRGGBB[AA]) → CSS color 
   const RAW_LEGEND = {
@@ -517,8 +563,7 @@
 
   function colorForId(id){return (PRESET_COLORS.find(c=>c.id==id)||PRESET_COLORS[0]).hex}
 
-  // ---------------- Paint-by-Numbers (EXTERNAL SVG with inline fallback) ----------------
-  const LEGEND_IDS = new Set([1,2,3,4,5,6,7,8,9,10,11]);
+  // Paint-by-Numbers (EXTERNAL SVG with inline fallback) 
   let svgRoot = null;   // <svg> element (either inside <object> or inlined)
   let svgDoc  = null;   // document of the <object> (if using <object>)
 
@@ -585,6 +630,7 @@
 
         checkPaintComplete_external();
       });
+    });
 
     // Reset (numbers stay colored; regions go back to white)
     const resetBtn = document.getElementById('reset-paint');
@@ -819,30 +865,79 @@
     ]
   };
 
+  let quotesShownCount = 0;      // total shown this visit to the Quotes step
+let newQuoteClicks = 0;        // how many times user pressed "New Quote" (max 2)
+
+function updateQuoteHint(){
+  const hint = document.getElementById('quote-limit-hint');
+  const remaining = Math.max(0, 3 - quotesShownCount);
+  if(hint){
+    hint.textContent = currentLang==='es'
+      ? `Puedes ver hasta 3 frases por iteración. Restantes: ${remaining}.`
+      : `You can view up to 3 quotes per iteration. Remaining: ${remaining}.`;
+  }
+}
+
+  function disableNewQuoteIfNeeded(){
+    const btn = document.getElementById('new-quote');
+    if(!btn) return;
+    const remainingClicks = Math.max(0, 2 - newQuoteClicks);
+    btn.disabled = (remainingClicks<=0 || quotesShownCount>=3);
+    btn.textContent = (currentLang==='es'
+      ? (remainingClicks>0 ? `Nueva Frase (${remainingClicks} restantes)` : 'Nueva Frase (límite)')
+      : (remainingClicks>0 ? `New Quote (${remainingClicks} left)` : 'New Quote (limit)'));
+  }
+
   let quoteBags = { en: [], es: [] };
   function shuffle(array){ for(let i=array.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [array[i],array[j]]=[array[j],array[i]];} return array; }
   function refillBag(lang){ const size=QUOTES[lang].length; quoteBags[lang]=shuffle([...Array(size).keys()]); }
   function getNextQuote(lang){ if(!quoteBags[lang]||quoteBags[lang].length===0) refillBag(lang); const idx=quoteBags[lang].pop(); return { q: QUOTES[lang][idx], a: "" }; }
 
   function showQuote(){
-    const { q, a } = getNextQuote(currentLang||'en');
-    const elQ=document.getElementById('quote-display');
-    const elA=document.getElementById('quote-author');
-    if(elQ) elQ.textContent=q;
-    if(elA) elA.textContent=a && a.trim()? '— '+a : '—';
+    // Pull next from both languages
+    const en = getNextQuote('en');
+    const es = getNextQuote('es');
+
+    const elQen=document.getElementById('quote-display-en');
+    const elAen=document.getElementById('quote-author-en');
+    const elQes=document.getElementById('quote-display-es');
+    const elAes=document.getElementById('quote-author-es');
+
+    if(elQen) elQen.textContent=en.q;
+    if(elAen) elAen.textContent=en.a && en.a.trim()? '— '+en.a : '—';
+    if(elQes) elQes.textContent=es.q;
+    if(elAes) elAes.textContent=es.a && es.a.trim()? '— '+es.a : '—';
+
+    // Count total pairs shown (1 initial, plus up to 2 more on clicks)
+    quotesShownCount++;
+    updateQuoteHint();
+    disableNewQuoteIfNeeded();
   }
-  document.getElementById('new-quote').addEventListener('click', showQuote);
+  
+  document.getElementById('new-quote').addEventListener('click', ()=>{
+    if(newQuoteClicks >= 2 || quotesShownCount >= 3){
+      disableNewQuoteIfNeeded();
+      return;
+    }
+    newQuoteClicks++;
+    showQuote();
+  });
+
   document.getElementById('mark-complete').addEventListener('click', ()=>{
     if(!activityDone){
       const ok = confirm( t('incompleteConfirm') );
       if(!ok) return;
     }
+    // reset counters when entering quotes
+    quotesShownCount = 0;
+    newQuoteClicks = 0;
     go('quotes');
-    showQuote();
+    showQuote(); // this is the first (counts as 1)
   });
+
   document.getElementById('to-intake').addEventListener('click', ()=> go('intake'));
 
-  // ---------------- Intake validation ----------------
+  // Intake validation 
   const intakeForm=document.getElementById('intake-form');
   const consent=document.getElementById('consent');
   const toAssistant=document.getElementById('to-assistant');
@@ -857,47 +952,197 @@
 
   const USER_CONTEXT={};
   toAssistant.addEventListener('click',()=>{
-    USER_CONTEXT.name=document.getElementById('name').value.trim();
-    USER_CONTEXT.age=document.getElementById('age').value.trim();
-    USER_CONTEXT.sex=document.getElementById('sex').value;
-    USER_CONTEXT.symptoms=document.getElementById('symptoms').value.trim();
-    USER_CONTEXT.history=document.getElementById('history').value.trim();
-    USER_CONTEXT.meds=document.getElementById('meds').value.trim();
+    USER_CONTEXT.name=(document.getElementById('name').value||'').trim();
+    USER_CONTEXT.age=(document.getElementById('age').value||'').trim();
+    USER_CONTEXT.sex=document.getElementById('sex').value||'';
+    USER_CONTEXT.symptoms=(document.getElementById('symptoms').value||'').trim();
+    USER_CONTEXT.history=(document.getElementById('history').value||'').trim();
+    USER_CONTEXT.meds=(document.getElementById('meds').value||'').trim();
+
+    // Persist for this session
+    sessionStorage.setItem('assistantUserContext', JSON.stringify(USER_CONTEXT));
+    
     go('assistant');
+    renderAssistant(); // << build 5 questions now
   });
 
-  // ---------------- Assistant (demo-friendly) ----------------
-  let OPENAI_KEY='';
-  document.getElementById('use-key').addEventListener('click',()=>{OPENAI_KEY=document.getElementById('temp-key').value.trim(); toast(OPENAI_KEY?'Key loaded':'No key');});
-  const chatLog=document.getElementById('chat-log');
-  function appendChat(role,text){ const div=document.createElement('div'); div.className='msg '+(role==='user'?'user':'bot'); div.textContent=text; chatLog.appendChild(div); chatLog.scrollTop=chatLog.scrollHeight; }
-  function buildSystemPrompt(){
-    const baseEn="You are a friendly oncology clinic assistant helping patients calm down and prepare. Be concise, supportive, and avoid medical diagnosis. If asked medical questions, provide general guidance and recommend consulting the clinician.";
-    const baseEs="Eres un asistente amable de la clínica de oncología para ayudar a calmar y preparar a los pacientes. Sé conciso, solidario y evita diagnosticar. Si preguntan temas médicos, ofrece orientación general y recomienda consultar a su médico.";
-    const ctx=USER_CONTEXT;
-    const ctxLineEn=`Context: name=${ctx.name||'-'}, age=${ctx.age||'-'}, sex=${ctx.sex||'-'}, symptoms=${ctx.symptoms||'-'}, history=${ctx.history||'-'}, meds=${ctx.meds||'-'}.`;
-    const ctxLineEs=`Contexto: nombre=${ctx.name||'-'}, edad=${ctx.age||'-'}, sexo=${ctx.sex||'-'}, síntomas=${ctx.symptoms||'-'}, historial=${ctx.history||'-'}, meds=${ctx.meds||'-'}.`;
-    return (currentLang==='en'? baseEn+" "+ctxLineEn : baseEs+" "+ctxLineEs);
+  function fmtSexAge(sex, age){
+    const sexMap = { female: currentLang==='es'?'Femenino':'Female', male: currentLang==='es'?'Masculino':'Male', other: currentLang==='es'?'Otro':'Other' };
+    const bits = [];
+    if(sex && sexMap[sex]) bits.push(sexMap[sex]);
+    if(age) bits.push(`${age} ${currentLang==='es'?'años':'years'}`);
+    return bits.join(', ');
   }
-  async function sendMessage(){
-    const input=document.getElementById('chat-input'); const msg=input.value.trim(); if(!msg) return;
-    appendChat('user',msg); input.value='';
-    if(OPENAI_KEY){
-      try{
-        const res=await fetch('https://api.openai.com/v1/chat/completions',{
-          method:'POST',
-          headers:{'Content-Type':'application/json','Authorization':'Bearer '+OPENAI_KEY},
-          body:JSON.stringify({model:'gpt-4o-mini',messages:[{role:'system',content:buildSystemPrompt()},{role:'user',content:msg}]})
-        });
-        const data=await res.json(); const text=data?.choices?.[0]?.message?.content || '...'; appendChat('bot',text); return;
-      }catch(e){ appendChat('bot', currentLang==='en'?'(API error — using offline reply)':'(Error de API — usando respuesta local)'); }
+
+  function capFirst(s){ return s ? s.charAt(0).toUpperCase() + s.slice(1) : ''; }
+
+  // Main question builder (returns array of 5 strings)
+  function buildOncologistQuestions(ctx){
+    const lang = currentLang;
+    const qs = [];
+    const has = {
+      symptoms: !!ctx.symptoms,
+      history:  !!ctx.history,
+      meds:     !!ctx.meds,
+      female:   ctx.sex==='female',
+      male:     ctx.sex==='male',
+      ageNum:   Number(ctx.age)||null
+    };
+
+    // 1) Always include diagnosis/staging
+    qs.push(
+      lang==='es'
+        ? '¿Cuál es exactamente mi diagnóstico y en qué etapa se encuentra? ¿Qué implica para mis opciones de tratamiento?'
+        : 'What is my exact diagnosis and stage, and how does that affect my treatment options?'
+    );
+
+    // 2) Always include treatment options & goals
+    qs.push(
+      lang==='es'
+        ? '¿Cuáles son mis opciones de tratamiento y el objetivo principal (curar, controlar, reducir síntomas)?'
+        : 'What are my treatment options and the primary goal (cure, control, or symptom relief)?'
+    );
+
+    // 3) Tailored: symptoms
+    if(has.symptoms){
+      qs.push(
+        lang==='es'
+          ? `Con mis síntomas actuales (“${ctx.symptoms}”), ¿qué los podría estar causando y cómo se manejarán durante el tratamiento?`
+          : `Given my current symptoms (“${ctx.symptoms}”), what could be causing them and how will they be managed during treatment?`
+      );
     }
-    appendChat('bot', currentLang==='en'
-      ? 'I hear you. Try a 4-4-6 breath: inhale 4s, hold 4s, exhale 6s. Want another grounding tip or a calming quote?'
-      : 'Te escucho. Prueba respiración 4-4-6: inhala 4s, mantén 4s, exhala 6s. ¿Quieres otra técnica de calma o una frase?');
+
+    // 4) Tailored: history
+    if(has.history){
+      qs.push(
+        lang==='es'
+          ? `Considerando mi historial médico (“${ctx.history}”), ¿cómo influye en los riesgos, la eficacia o la elección del tratamiento?`
+          : `Considering my medical history (“${ctx.history}”), how does it affect risks, effectiveness, or the choice of treatment?`
+      );
+    }
+
+    // 5) Tailored: meds/allergies
+    if(has.meds){
+      qs.push(
+        lang==='es'
+          ? `Tomando en cuenta mis medicamentos/alergias (“${ctx.meds}”), ¿hay interacciones o precauciones con quimio, radioterapia o estudios?`
+          : `Given my medications/allergies (“${ctx.meds}”), are there interactions or precautions with chemo, radiation, or imaging?`
+      );
+    }
+
+    // 6) Age/sex considerations
+    if(has.female && has.ageNum && has.ageNum>=15 && has.ageNum<=45){
+      qs.push(
+        lang==='es'
+          ? '¿Cómo afectará el tratamiento la fertilidad, menstruación o menopausia temprana? ¿Hay opciones de preservación de fertilidad?'
+          : 'How might treatment affect fertility, menstruation, or early menopause? Are there fertility-preservation options?'
+      );
+    }else if(has.male && has.ageNum && has.ageNum>=15 && has.ageNum<=50){
+      qs.push(
+        lang==='es'
+          ? '¿El tratamiento puede afectar mi fertilidad o función sexual? ¿Debo considerar preservar esperma?'
+          : 'Could treatment affect my fertility or sexual function? Should I consider sperm preservation?'
+      );
+    }else if(has.ageNum && has.ageNum>=65){
+      qs.push(
+        lang==='es'
+          ? 'Dado mi rango de edad, ¿se ajustarán dosis o esquemas para reducir efectos adversos y considerar comorbilidades?'
+          : 'Given my age, will doses or regimens be adjusted to reduce side effects and consider comorbidities?'
+     );
+    }
+
+    // 7) Next steps & timeline (always useful)
+    qs.push(
+      lang==='es'
+        ? '¿Cuáles son los próximos pasos y el cronograma (pruebas, inicio de tratamiento, seguimiento)?'
+        : 'What are the next steps and timeline (tests, treatment start, follow-ups)?'
+    );
+
+    // 8) Side effects & support
+    qs.push(
+      lang==='es'
+        ? '¿Cuáles son los efectos secundarios más probables y qué señales de alarma requieren comunicarme o acudir de inmediato?'
+        : 'What side effects are most likely, and what warning signs should prompt me to call or seek immediate care?'
+    );
+
+    // 9) Practical support
+    qs.push(
+      lang==='es'
+        ? '¿Qué recursos de apoyo (psico-oncología, nutrición, trabajo social) están disponibles para manejar ansiedad y calidad de vida?'
+        : 'What support resources (psycho-oncology, nutrition, social work) are available to help with anxiety and quality of life?'
+    );
+
+    // De-duplicate and pick top 5 (priority: earlier items first)
+    const seen = new Set();
+    const final = [];
+    for(const q of qs){
+      const key = q.toLowerCase();
+      if(!seen.has(key)){
+        final.push(q);
+        seen.add(key);
+        if(final.length===5) break;
+      }
+    }
+    // Safety: if still <5, pad with general
+    const pad = lang==='es'
+      ? [
+          '¿Cómo mediremos si el tratamiento está funcionando y cuándo revaluaremos el plan?',
+          'Si tengo dudas entre visitas, ¿cuál es la mejor forma de comunicarme con el equipo?'
+        ]
+      : [
+          'How will we measure whether treatment is working, and when will we reassess the plan?',
+          'Between visits, what is the best way to reach the team if I have questions?'
+        ];
+    let i=0; while(final.length<5 && i<pad.length){ final.push(pad[i++]); }
+
+    return final.slice(0,5);
   }
-  document.getElementById('send-chat').addEventListener('click',sendMessage);
-  document.getElementById('chat-input').addEventListener('keydown',e=>{ if(e.key==='Enter') sendMessage(); });
+
+function renderAssistant(){
+  // Load from session first if available
+  const saved = sessionStorage.getItem('assistantUserContext');
+  const ctx = saved ? JSON.parse(saved) : USER_CONTEXT;
+
+  const name = capFirst(ctx.name||'');
+  const sexAge = fmtSexAge(ctx.sex, ctx.age);
+  const introEl = document.getElementById('assistant-intro');
+  const templ = translations[currentLang].assistantIntroTemplate;
+  if(introEl && typeof templ === 'function'){
+    introEl.textContent = templ(name, sexAge);
+  }
+
+  const listEl = document.getElementById('onc-qs');
+  if(!listEl) return;
+  listEl.innerHTML = '';
+  const qs = buildOncologistQuestions(ctx);
+  qs.forEach(q=>{
+    const li = document.createElement('li');
+    li.textContent = q;
+    listEl.appendChild(li);
+  });
+}
+
+// Actions: regenerate / copy / download
+document.getElementById('regen-qs')?.addEventListener('click', renderAssistant);
+
+// Copy all questions to clipboard
+document.getElementById('copy-qs')?.addEventListener('click', ()=>{
+  const qs = [...document.querySelectorAll('#onc-qs li')].map(li=>`• ${li.textContent}`);
+  navigator.clipboard.writeText(qs.join('\n')).then(()=>{
+    toast(currentLang==='es' ? 'Copiado' : 'Copied');
+  }).catch(()=> toast(currentLang==='es' ? 'No se pudo copiar' : 'Copy failed'));
+});
+
+// Download as .txt
+document.getElementById('download-qs')?.addEventListener('click', ()=>{
+  const qs = [...document.querySelectorAll('#onc-qs li')].map((li,i)=>`${i+1}. ${li.textContent}`);
+  const blob = new Blob([qs.join('\n')], {type:'text/plain;charset=utf-8'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = 'oncologist-questions.txt';
+  document.body.appendChild(a); a.click(); a.remove();
+  URL.revokeObjectURL(url);
+});
 
   // ---------------- Tiny toast ----------------
   function toast(text){
