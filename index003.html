@@ -314,7 +314,7 @@
   let currentLang='en';
   const translations = {
     en:{
-      appTitle:'AI Stress Reliever',
+      appTitle:'Calm-Prep Space',
       stepWelcome:'Welcome', stepSelect:'Activity Selection', stepActivity:'Activity', stepQuotes:'Calming Quotes', stepIntake:'Info & Consent', stepAssistant:'AI Assistant',
       welcomeTitle:'Welcome',
       welcomeBody:'Welcome to the calm-prep space before your first visit with <strong>Dr. Ana Sala</strong>. In a few simple steps, you’ll complete one activity to steady your breathing and focus. Then we’ll share a couple of calming quotes and, if you wish, you can chat with our AI assistant.',
@@ -356,7 +356,7 @@
       assistantFootnote:'These suggestions are based on the information you entered and are not medical advice.'
     },
     es:{
-      appTitle:'Aliviador de Estrés IA',
+      appTitle:'Espacio Preparación de Calma',
       stepWelcome:'Bienvenida', stepSelect:'Seleccionar Actividad', stepActivity:'Actividad', stepQuotes:'Frases', stepIntake:'Información y Consentimiento', stepAssistant:'Asistente IA',
       welcomeTitle:'Bienvenida',
       welcomeBody:'Bienvenido/a al espacio de calma antes de tu primera visita con la <strong>Dra. Ana Sala</strong>. En pocos pasos completarás una actividad para estabilizar la respiración y el enfoque. Luego veremos unas frases tranquilizadoras y, si deseas, podrás chatear con nuestro asistente de IA.',
@@ -897,31 +897,41 @@ function updateQuoteHint(){
       : (remainingClicks>0 ? `New Quote (${remainingClicks} left)` : 'New Quote (limit)'));
   }
 
-  let quoteBags = { en: [], es: [] };
-  function shuffle(array){ for(let i=array.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [array[i],array[j]]=[array[j],array[i]];} return array; }
-  function refillBag(lang){ const size=QUOTES[lang].length; quoteBags[lang]=shuffle([...Array(size).keys()]); }
-  function getNextQuote(lang){ if(!quoteBags[lang]||quoteBags[lang].length===0) refillBag(lang); const idx=quoteBags[lang].pop(); return { q: QUOTES[lang][idx], a: "" }; }
+  // One shared index bag so EN & ES show the same quote
+  let quoteBag = [];
+  function shuffle(arr){ for(let i=arr.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [arr[i],arr[j]]=[arr[j],arr[i]]; } return arr; }
+  function refillSharedBag(){
+    const n = Math.min(QUOTES.en.length, QUOTES.es.length);
+    quoteBag = shuffle([...Array(n).keys()]);
+  }
+  function getNextPair(){
+    if(!quoteBag || quoteBag.length===0) refillSharedBag();
+    const idx = quoteBag.pop();
+    return {
+      en: { q: QUOTES.en[idx], a: "" },
+      es: { q: QUOTES.es[idx], a: "" }
+    };
+  }
 
+
+  
   function showQuote(){
-    // Pull next from both languages
-    const en = getNextQuote('en');
-    const es = getNextQuote('es');
-
+    const pair = getNextPair();
     const elQen=document.getElementById('quote-display-en');
     const elAen=document.getElementById('quote-author-en');
     const elQes=document.getElementById('quote-display-es');
     const elAes=document.getElementById('quote-author-es');
-
-    if(elQen) elQen.textContent=en.q;
-    if(elAen) elAen.textContent=en.a && en.a.trim()? '— '+en.a : '—';
-    if(elQes) elQes.textContent=es.q;
-    if(elAes) elAes.textContent=es.a && es.a.trim()? '— '+es.a : '—';
-
-    // Count total pairs shown (1 initial, plus up to 2 more on clicks)
+  
+    if(elQen) elQen.textContent = pair.en.q;
+    if(elAen) elAen.textContent = pair.en.a && pair.en.a.trim()? '— '+pair.en.a : '—';
+    if(elQes) elQes.textContent = pair.es.q;
+    if(elAes) elAes.textContent = pair.es.a && pair.es.a.trim()? '— '+pair.es.a : '—';
+  
     quotesShownCount++;
     updateQuoteHint();
     disableNewQuoteIfNeeded();
   }
+
   
   document.getElementById('new-quote').addEventListener('click', ()=>{
     if(newQuoteClicks >= 2 || quotesShownCount >= 3){
@@ -1165,8 +1175,9 @@ document.getElementById('download-qs')?.addEventListener('click', ()=>{
   updateLanguage();
   renderLegend();
   bindPeacock();
-  // Prepare quote bags
-  (function(){ ['en','es'].forEach(refillBag); })();
+  // Prepare shared quote bag
+  refillSharedBag();
+  
 </script>
 </body>
 </html>
